@@ -1,17 +1,171 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.6">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
-    span.s1 {font-kerning: none}
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>むぎとりっか | Mugi & Ricca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<p class="p1"><span class="s1">index.html</span></p>
+  <div class="cursor-dot" aria-hidden="true"></div>
+
+  <header class="site-header" data-reveal>
+    <a class="brand" href="#top" aria-label="むぎとりっか ホーム">
+      <span class="brand-mark">M&R</span>
+      <span>むぎとりっか</span>
+    </a>
+    <nav class="nav-links" aria-label="メインナビゲーション">
+      <a href="#profile">Profile</a>
+      <a href="#moments">Moments</a>
+      <a href="#gallery">Gallery</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy" data-reveal>
+        <p class="eyebrow">Mugi & Ricca Official Mini Site</p>
+        <h1>ふたりでいると、毎日がちょっと特別。</h1>
+        <p class="hero-text">
+          ふわっと甘え上手なむぎと、くるくるおめめのりっか。
+          仲良しなふたりの性格、好きなこと、かわいい瞬間を紹介します。
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#profile">ふたりを見る</a>
+          <a class="button ghost" href="#moments">今日の気分</a>
+        </div>
+      </div>
+
+      <div class="hero-stage" data-reveal>
+        <img src="assets/mugi-rikka-hero.png" alt="ミント色の背景で並んで座る、左のむぎと右のりっか">
+        <div class="floating-tag tag-left">
+          <span>Left</span>
+          <strong>むぎ</strong>
+        </div>
+        <div class="floating-tag tag-right">
+          <span>Right</span>
+          <strong>りっか</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-band" aria-label="むぎとりっかの特徴" data-reveal>
+      <div>
+        <strong>2</strong>
+        <span>best friends</span>
+      </div>
+      <div>
+        <strong>100%</strong>
+        <span>cuteness</span>
+      </div>
+      <div>
+        <strong>毎日</strong>
+        <span>new mood</span>
+      </div>
+    </section>
+
+    <section class="section profile-section" id="profile">
+      <div class="section-heading" data-reveal>
+        <p class="eyebrow">Profile</p>
+        <h2>ちがう魅力で、ぴったり仲良し。</h2>
+      </div>
+
+      <div class="profile-switcher" data-reveal>
+        <div class="switch-buttons" role="tablist" aria-label="プロフィール切り替え">
+          <button class="switch-button active" type="button" role="tab" aria-selected="true" data-profile="mugi">むぎ</button>
+          <button class="switch-button" type="button" role="tab" aria-selected="false" data-profile="ricca">りっか</button>
+        </div>
+
+        <article class="profile-panel active" data-panel="mugi">
+          <div class="profile-name">
+            <span>MUGI</span>
+            <h3>むぎ</h3>
+          </div>
+          <p>
+            やさしいアプリコットカラーの、まっすぐ見つめる甘えんぼ。
+            初めての場所でもそっと様子を見ながら、気づけばみんなの真ん中にいます。
+          </p>
+          <ul class="chips" aria-label="むぎの特徴">
+            <li>おだやか</li>
+            <li>聞き上手</li>
+            <li>おやつ探知機</li>
+          </ul>
+        </article>
+
+        <article class="profile-panel" data-panel="ricca">
+          <div class="profile-name">
+            <span>RICCA</span>
+            <h3>りっか</h3>
+          </div>
+          <p>
+            黒いくるくるヘアと、きらっと光る目がチャームポイント。
+            少しクールに見えて、楽しいことを見つけると誰よりも早く駆け寄ります。
+          </p>
+          <ul class="chips" aria-label="りっかの特徴">
+            <li>好奇心いっぱい</li>
+            <li>写真映え</li>
+            <li>そばにいたい派</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section moments-section" id="moments">
+      <div class="section-heading" data-reveal>
+        <p class="eyebrow">Moments</p>
+        <h2>今日のふたりはどんな気分？</h2>
+      </div>
+
+      <div class="mood-grid">
+        <button class="mood-card" type="button" data-mood="ごきげん" data-reveal>
+          <span class="mood-face">:)</span>
+          <strong>ごきげん</strong>
+          <small>しっぽが止まらない日</small>
+        </button>
+        <button class="mood-card" type="button" data-mood="おすまし" data-reveal>
+          <span class="mood-face">*.*</span>
+          <strong>おすまし</strong>
+          <small>カメラ目線が完璧な日</small>
+        </button>
+        <button class="mood-card" type="button" data-mood="ねむねむ" data-reveal>
+          <span class="mood-face">-.-</span>
+          <strong>ねむねむ</strong>
+          <small>ふかふかに集合する日</small>
+        </button>
+      </div>
+
+      <p class="mood-result" aria-live="polite" data-reveal>
+        カードを押すと、ふたりの今日のムードが変わります。
+      </p>
+    </section>
+
+    <section class="section gallery-section" id="gallery">
+      <div class="section-heading" data-reveal>
+        <p class="eyebrow">Gallery</p>
+        <h2>小さな瞬間を、宝物みたいに。</h2>
+      </div>
+
+      <div class="gallery">
+        <figure class="gallery-item large" data-reveal>
+          <img src="assets/mugi-rikka-hero.png" alt="むぎとりっかが並んでこちらを見る写真">
+          <figcaption>ふたり並ぶと、空気までやわらかくなる。</figcaption>
+        </figure>
+        <div class="quote-panel" data-reveal>
+          <p>「今日はどこ行く？」みたいな顔で、いつもそばにいるふたり。</p>
+          <span>With Mugi & Ricca</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Made for Mugi & Ricca</p>
+    <a href="#top">Back to top</a>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
