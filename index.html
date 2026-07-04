@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>りっかの横スクロールアクション Ver.0.1</title>
+  <title>りっかの横スクロールアクション Ver.0.5</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +11,7 @@
     <section id="titleScreen" class="screen overlay-screen">
       <h1>りっかのさんぽ道</h1>
       <p class="lead">おやつを集めながら、穴と障害物をジャンプで越えよう。</p>
+      <p class="final-score">High Score: <strong id="titleHighScoreText">0</strong></p>
       <button id="startButton" class="menu-button" type="button">START</button>
       <div class="help">
         <p>PC: ← → で移動 / Space または ↑ でジャンプ</p>
@@ -25,7 +26,14 @@
         <strong id="scoreText">0</strong>
         <span>Character</span>
         <strong id="characterText">りっか</strong>
+        <span>Awaken</span>
+        <strong id="awakeningText">0/3</strong>
+        <span>Sound</span>
+        <strong id="soundText">ON</strong>
         <span class="switch-help">C / Tab: 交代</span>
+      </div>
+      <div class="awakening-meter" aria-label="覚醒ゲージ">
+        <div id="awakeningBar" class="awakening-bar"></div>
       </div>
       <canvas id="gameCanvas" width="960" height="540" aria-label="りっかの横スクロールアクションゲーム"></canvas>
       <div class="mobile-controls" aria-label="スマホ操作">
@@ -33,19 +41,25 @@
         <button id="jumpButton" class="control-button jump" type="button">JUMP</button>
         <button id="rightButton" class="control-button" type="button">→</button>
         <button id="switchButton" class="control-button switch" type="button">交代</button>
+        <button id="muteButton" class="control-button mute" type="button">音ON</button>
       </div>
     </section>
 
     <section id="gameOverScreen" class="screen overlay-screen hidden">
       <h2>GAME OVER</h2>
       <p class="final-score">Score: <strong id="finalScoreText">0</strong></p>
+      <p class="final-score">High Score: <strong id="gameOverHighScoreText">0</strong></p>
       <button id="restartButton" class="menu-button" type="button">RESTART</button>
+      <button id="gameOverTitleButton" class="menu-button secondary" type="button">TITLE</button>
     </section>
 
     <section id="stageClearScreen" class="screen overlay-screen hidden">
       <h2 id="clearTitle">STAGE CLEAR</h2>
       <p class="final-score">Score: <strong id="clearScoreText">0</strong></p>
+      <p class="final-score">High Score: <strong id="clearHighScoreText">0</strong></p>
       <button id="nextStageButton" class="menu-button" type="button">NEXT STAGE</button>
+      <button id="clearRestartButton" class="menu-button" type="button">RESTART</button>
+      <button id="clearTitleButton" class="menu-button secondary" type="button">TITLE</button>
     </section>
   </main>
 

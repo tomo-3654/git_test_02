@@ -7,12 +7,61 @@ const CANVAS_CONFIG = {
   height: 540
 };
 
+const GAME_STATE = {
+  TITLE: "title",
+  PLAYING: "playing",
+  GAME_OVER: "gameOver",
+  STAGE_CLEAR: "stageClear"
+};
+
+const STORAGE_KEYS = {
+  highScore: "ricca_mugi_game_high_score",
+  muted: "ricca_mugi_game_muted"
+};
+
 const STAGE_CONFIG = {
   snackScore: 10,
+  awakeningItemScore: 30,
   fallLimit: 620,
   cameraLeadX: 380,
   goalWidth: 64,
   goalHeight: 128
+};
+
+const AWAKENING_CONFIG = {
+  requiredItems: 3,
+  duration: 6000,
+  messageDuration: 1200,
+  auraScale: 1.08,
+  riccaAwakenedStats: {
+    moveSpeed: 480,
+    jumpPower: 900,
+    gravity: 1620,
+    maxFallSpeed: 1040,
+    acceleration: 3400,
+    friction: 0.92,
+    minSlideSpeed: 85
+  }
+};
+
+const OTHER_DOG_CONFIG = {
+  eventDistance: 90,
+  cooldown: 3000,
+  mugiStunDuration: 800,
+  riccaFollowUpDelay: 500,
+  mugiPenalty: 5,
+  riccaComboBonus: 10,
+  awakenedBonus: 10,
+  drawWidth: 58,
+  drawHeight: 44,
+  bobAmplitude: 2,
+  fallbackColor: "#f4f0e8",
+  reactionDistance: 34
+};
+
+const FLOATING_TEXT_CONFIG = {
+  duration: 1,
+  riseSpeed: 46
 };
 
 const CHARACTER_CONFIGS = {
@@ -54,6 +103,10 @@ const CHARACTER_CONFIGS = {
 
 const CHARACTER_ORDER = ["ricca", "mugi"];
 const START_POSITION = { x: 80, y: 360 };
+const OTHER_DOG_IMAGE_PATHS = [
+  "assets/images/dog_friend_01.png",
+  "assets/images/dog_friend_02.png"
+];
 
 const LEVELS = [
   {
@@ -83,16 +136,22 @@ const LEVELS = [
       { x: 1530, y: 394, width: 46, height: 44 },
       { x: 2520, y: 388, width: 48, height: 50 }
     ],
-    snacks: [
-      { x: 240, y: 385 },
-      { x: 690, y: 385 },
-      { x: 960, y: 292 },
-      { x: 1320, y: 248 },
-      { x: 1770, y: 282 },
-      { x: 2040, y: 190 },
-      { x: 2470, y: 276 },
-      { x: 2890, y: 186 },
-      { x: 2860, y: 154 }
+    items: [
+      { type: "treat", x: 240, y: 385 },
+      { type: "treat", x: 690, y: 385 },
+      { type: "awakening", x: 960, y: 292 },
+      { type: "treat", x: 1320, y: 248 },
+      { type: "awakening", x: 1770, y: 282 },
+      { type: "treat", x: 2040, y: 190 },
+      { type: "treat", x: 2470, y: 276 },
+      { type: "awakening", x: 2660, y: 386 },
+      { type: "treat", x: 2890, y: 186 },
+      { type: "treat", x: 2860, y: 154 },
+      { type: "treat", x: 3000, y: 116 }
+    ],
+    otherDogs: [
+      { x: 1180, groundY: 438 },
+      { x: 2320, groundY: 438 }
     ]
   },
   {
@@ -124,16 +183,22 @@ const LEVELS = [
       { x: 2640, y: 384, width: 50, height: 54 },
       { x: 3160, y: 388, width: 48, height: 50 }
     ],
-    snacks: [
-      { x: 230, y: 385 },
-      { x: 650, y: 288 },
-      { x: 1160, y: 254 },
-      { x: 1660, y: 386 },
-      { x: 2110, y: 188 },
-      { x: 2580, y: 270 },
-      { x: 3030, y: 200 },
-      { x: 3190, y: 136 },
-      { x: 3290, y: 385 }
+    items: [
+      { type: "treat", x: 230, y: 385 },
+      { type: "awakening", x: 650, y: 288 },
+      { type: "treat", x: 1160, y: 254 },
+      { type: "awakening", x: 1660, y: 386 },
+      { type: "treat", x: 2110, y: 188 },
+      { type: "treat", x: 2580, y: 270 },
+      { type: "awakening", x: 2860, y: 386 },
+      { type: "treat", x: 3030, y: 200 },
+      { type: "treat", x: 3190, y: 136 },
+      { type: "treat", x: 3290, y: 385 }
+    ],
+    otherDogs: [
+      { x: 1340, groundY: 438 },
+      { x: 2380, groundY: 438 },
+      { x: 3050, groundY: 250 }
     ]
   }
 ];
@@ -147,16 +212,27 @@ const stageClearScreen = document.getElementById("stageClearScreen");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restartButton");
 const nextStageButton = document.getElementById("nextStageButton");
+const clearRestartButton = document.getElementById("clearRestartButton");
+const clearTitleButton = document.getElementById("clearTitleButton");
+const gameOverTitleButton = document.getElementById("gameOverTitleButton");
+const muteButton = document.getElementById("muteButton");
 const stageText = document.getElementById("stageText");
 const scoreText = document.getElementById("scoreText");
 const characterText = document.getElementById("characterText");
+const awakeningText = document.getElementById("awakeningText");
+const awakeningBar = document.getElementById("awakeningBar");
+const soundText = document.getElementById("soundText");
+const titleHighScoreText = document.getElementById("titleHighScoreText");
 const finalScoreText = document.getElementById("finalScoreText");
+const gameOverHighScoreText = document.getElementById("gameOverHighScoreText");
 const clearTitle = document.getElementById("clearTitle");
 const clearScoreText = document.getElementById("clearScoreText");
+const clearHighScoreText = document.getElementById("clearHighScoreText");
 
 const input = {
   left: false,
   right: false,
+  jumpHeld: false,
   jumpPressed: false,
   switchPressed: false
 };
@@ -164,13 +240,26 @@ const input = {
 let characterImages = {};
 let activeCharacterId = "ricca";
 let player;
-let snacks = [];
+let items = [];
+let otherDogs = [];
+let otherDogImages = [];
 let score = 0;
+let highScore = 0;
 let cameraX = 0;
-let gameState = "title";
+let gameState = GAME_STATE.TITLE;
 let lastTime = 0;
 let currentLevelIndex = 0;
 let switchEffectTime = 0;
+let awakeningItemCount = 0;
+let isAwakened = false;
+let awakeningTimer = 0;
+let awakeningMessageTimer = 0;
+let statusMessage = "";
+let statusMessageTimer = 0;
+let mugiStunTimer = 0;
+let messageManager;
+let soundManager;
+let floatingTexts = [];
 
 class Player {
   constructor(characterId, images, state = {}) {
@@ -187,32 +276,47 @@ class Player {
   }
 
   get config() {
-    return CHARACTER_CONFIGS[this.characterId];
+    const baseConfig = CHARACTER_CONFIGS[this.characterId];
+    if (this.characterId !== "ricca" || !isAwakened) {
+      return baseConfig;
+    }
+
+    return {
+      ...baseConfig,
+      ...AWAKENING_CONFIG.riccaAwakenedStats,
+      animationFrameInterval: 80
+    };
   }
 
   update(deltaTime, currentInput, platforms) {
-    this.vx = 0;
+    const config = this.config;
+    const awakenedRicca = this.characterId === "ricca" && isAwakened;
 
-    if (currentInput.left) {
-      this.vx = -this.config.moveSpeed;
-      this.facing = "left";
+    if (awakenedRicca) {
+      this.updateAwakenedHorizontalVelocity(deltaTime, currentInput, config);
+    } else {
+      this.vx = 0;
+
+      if (currentInput.left) {
+        this.vx = -config.moveSpeed;
+        this.facing = "left";
+      }
+
+      if (currentInput.right) {
+        this.vx = config.moveSpeed;
+        this.facing = "right";
+      }
     }
 
-    if (currentInput.right) {
-      this.vx = this.config.moveSpeed;
-      this.facing = "right";
-    }
-
-    if (currentInput.jumpPressed) {
+    if (currentInput.jumpPressed && this.isOnGround) {
       this.jump();
-      currentInput.jumpPressed = false;
     }
 
     this.x += this.vx * deltaTime;
-    this.x = Math.max(0, Math.min(this.x, getCurrentLevel().length - this.config.hitboxWidth));
+    this.x = Math.max(0, Math.min(this.x, getCurrentLevel().length - config.hitboxWidth));
 
     const previousY = this.y;
-    this.vy = Math.min(this.vy + this.config.gravity * deltaTime, this.config.maxFallSpeed);
+    this.vy = Math.min(this.vy + config.gravity * deltaTime, config.maxFallSpeed);
     this.y += this.vy * deltaTime;
     this.isOnGround = false;
 
@@ -225,6 +329,30 @@ class Player {
     }
 
     this.updateAnimation(deltaTime, currentInput);
+  }
+
+  updateAwakenedHorizontalVelocity(deltaTime, currentInput, config) {
+    let direction = 0;
+    if (currentInput.left) {
+      direction -= 1;
+    }
+    if (currentInput.right) {
+      direction += 1;
+    }
+
+    if (direction !== 0) {
+      this.vx += direction * config.acceleration * deltaTime;
+      this.facing = direction < 0 ? "left" : "right";
+    } else {
+      this.vx *= Math.pow(config.friction, deltaTime * 60);
+    }
+
+    const facingDirection = this.facing === "left" ? -1 : 1;
+    if (Math.abs(this.vx) < config.minSlideSpeed) {
+      this.vx = facingDirection * config.minSlideSpeed;
+    }
+
+    this.vx = clamp(this.vx, -config.moveSpeed, config.moveSpeed);
   }
 
   updateAnimation(deltaTime, currentInput) {
@@ -249,18 +377,21 @@ class Player {
   draw(context, currentCameraX) {
     const config = this.config;
     const hitbox = this.getHitbox();
-    const drawX = this.x - currentCameraX - (config.drawWidth - config.hitboxWidth) / 2;
-    const drawY = this.y - (config.drawHeight - config.hitboxHeight) + 8;
+    const drawScale = this.characterId === "ricca" && isAwakened ? AWAKENING_CONFIG.auraScale : 1;
+    const drawWidth = config.drawWidth * drawScale;
+    const drawHeight = config.drawHeight * drawScale;
+    const drawX = this.x - currentCameraX - (drawWidth - config.hitboxWidth) / 2;
+    const drawY = this.y - (drawHeight - config.hitboxHeight) + 8;
     const image = this.images[this.animationFrame];
 
     if (image && image.loaded) {
       context.save();
       if (this.facing === "left") {
-        context.translate(drawX + config.drawWidth, drawY);
+        context.translate(drawX + drawWidth, drawY);
         context.scale(-1, 1);
-        context.drawImage(image.element, 0, 0, config.drawWidth, config.drawHeight);
+        context.drawImage(image.element, 0, 0, drawWidth, drawHeight);
       } else {
-        context.drawImage(image.element, drawX, drawY, config.drawWidth, config.drawHeight);
+        context.drawImage(image.element, drawX, drawY, drawWidth, drawHeight);
       }
       context.restore();
     } else {
@@ -289,6 +420,7 @@ class Player {
     }
     this.vy = -this.config.jumpPower;
     this.isOnGround = false;
+    soundManager.playJump();
   }
 
   getHitbox() {
@@ -309,26 +441,419 @@ class Player {
   }
 }
 
+class OtherDog {
+  constructor(config, index) {
+    this.x = config.x;
+    this.groundY = config.groundY ?? config.y;
+    this.index = index;
+    this.cooldownTimer = 0;
+    this.reactionTimer = 0;
+    this.reactionType = "idle";
+    this.direction = index % 2 === 0 ? -1 : 1;
+    this.animTime = 0;
+  }
+
+  update(deltaTime) {
+    this.animTime += deltaTime * 1000;
+    this.cooldownTimer = Math.max(0, this.cooldownTimer - deltaTime * 1000);
+    this.reactionTimer = Math.max(0, this.reactionTimer - deltaTime * 1000);
+
+    if (this.reactionTimer <= 0) {
+      this.reactionType = "idle";
+    }
+  }
+
+  draw(context, currentCameraX, images) {
+    const x = this.getDrawX() - currentCameraX;
+    const bobOffset = Math.sin(this.animTime * 0.005 + this.index) * OTHER_DOG_CONFIG.bobAmplitude;
+    const y = this.groundY - OTHER_DOG_CONFIG.drawHeight + bobOffset;
+    const frame = Math.floor(performance.now() / 240) % 2;
+    const image = images[frame];
+
+    if (image && image.loaded) {
+      context.drawImage(image.element, x, y, OTHER_DOG_CONFIG.drawWidth, OTHER_DOG_CONFIG.drawHeight);
+    } else {
+      this.drawFallback(context, x, y);
+    }
+
+    if (DEBUG_HITBOX) {
+      const area = this.getEventArea();
+      context.strokeStyle = "#b965ff";
+      context.lineWidth = 2;
+      context.strokeRect(area.x - currentCameraX, area.y, area.width, area.height);
+    }
+  }
+
+  drawFallback(context, x, y) {
+    context.save();
+    context.fillStyle = OTHER_DOG_CONFIG.fallbackColor;
+    context.beginPath();
+    context.ellipse(x + 28, y + 24, 28, 20, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#7a5b45";
+    context.beginPath();
+    context.arc(x + 46, y + 14, 16, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#25313d";
+    context.beginPath();
+    context.arc(x + 51, y + 11, 3, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#d8aa68";
+    context.fillRect(x + 8, y + 38, 8, 12);
+    context.fillRect(x + 38, y + 38, 8, 12);
+    context.restore();
+  }
+
+  getDrawX() {
+    if (this.reactionType === "mugi") {
+      return this.x + this.direction * OTHER_DOG_CONFIG.reactionDistance;
+    }
+    if (this.reactionType === "awakened") {
+      return this.x + this.direction * OTHER_DOG_CONFIG.reactionDistance * 1.5;
+    }
+    return this.x;
+  }
+
+  getCenter() {
+    return {
+      x: this.getDrawX() + OTHER_DOG_CONFIG.drawWidth / 2,
+      y: this.groundY - OTHER_DOG_CONFIG.drawHeight / 2
+    };
+  }
+
+  getEventArea() {
+    const center = this.getCenter();
+    return {
+      x: center.x - OTHER_DOG_CONFIG.eventDistance,
+      y: center.y - OTHER_DOG_CONFIG.eventDistance,
+      width: OTHER_DOG_CONFIG.eventDistance * 2,
+      height: OTHER_DOG_CONFIG.eventDistance * 2
+    };
+  }
+
+  canTrigger() {
+    return this.cooldownTimer <= 0;
+  }
+
+  triggerReaction(type) {
+    this.reactionType = type;
+    this.reactionTimer = 650;
+    this.cooldownTimer = OTHER_DOG_CONFIG.cooldown;
+  }
+}
+
+class MessageManager {
+  constructor() {
+    this.messages = [];
+  }
+
+  add(text, duration = 1.4, delay = 0) {
+    this.messages.push({ text, duration, remaining: duration, delay });
+  }
+
+  update(deltaTime) {
+    for (const message of this.messages) {
+      if (message.delay > 0) {
+        message.delay -= deltaTime;
+      } else {
+        message.remaining -= deltaTime;
+      }
+    }
+    this.messages = this.messages.filter((message) => message.delay > 0 || message.remaining > 0);
+  }
+
+  draw(context) {
+    context.save();
+    context.textAlign = "center";
+    context.font = "bold 28px system-ui, sans-serif";
+    this.messages.forEach((message, index) => {
+      if (message.delay > 0) {
+        return;
+      }
+      const alpha = Math.min(1, message.remaining / 0.25);
+      context.globalAlpha = alpha;
+      context.fillStyle = "#1e425b";
+      context.fillText(message.text, CANVAS_CONFIG.width / 2, 246 + index * 34);
+    });
+    context.restore();
+  }
+}
+
+class FloatingText {
+  constructor(text, x, y, options = {}) {
+    this.text = text;
+    this.x = x;
+    this.y = y;
+    this.startY = y;
+    this.duration = options.duration ?? FLOATING_TEXT_CONFIG.duration;
+    this.remaining = this.duration;
+    this.color = options.color ?? "#1e425b";
+    this.world = options.world ?? true;
+  }
+
+  update(deltaTime) {
+    this.remaining -= deltaTime;
+    const progress = 1 - this.remaining / this.duration;
+    this.y = this.startY - progress * FLOATING_TEXT_CONFIG.riseSpeed;
+  }
+
+  draw(context, currentCameraX) {
+    const alpha = clamp(this.remaining / 0.25, 0, 1);
+    const drawX = this.world ? this.x - currentCameraX : this.x;
+    context.save();
+    context.globalAlpha = alpha;
+    context.fillStyle = this.color;
+    context.font = "bold 24px system-ui, sans-serif";
+    context.textAlign = "center";
+    context.fillText(this.text, drawX, this.y);
+    context.restore();
+  }
+
+  isAlive() {
+    return this.remaining > 0;
+  }
+}
+
+class SoundManager {
+  constructor() {
+    this.context = null;
+    this.enabled = false;
+    this.muted = readStoredBoolean(STORAGE_KEYS.muted, false);
+  }
+
+  init() {
+    if (this.context || this.enabled) {
+      return;
+    }
+
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        return;
+      }
+      this.context = new AudioContextClass();
+      this.enabled = true;
+    } catch (error) {
+      this.enabled = false;
+      this.context = null;
+    }
+  }
+
+  resume() {
+    this.init();
+    if (!this.context || this.context.state !== "suspended") {
+      return;
+    }
+
+    try {
+      this.context.resume().catch(() => {});
+    } catch (error) {
+      // Audio is optional. Keep the game running silently if resume fails.
+    }
+  }
+
+  setMuted(value) {
+    this.muted = value;
+    writeStoredBoolean(STORAGE_KEYS.muted, value);
+    updateSoundHud();
+  }
+
+  toggleMuted() {
+    this.setMuted(!this.muted);
+  }
+
+  playJump() {
+    this.playToneSequence([
+      { frequency: 520, start: 0, duration: 0.05, type: "triangle", gain: 0.08 },
+      { frequency: 760, start: 0.04, duration: 0.08, type: "triangle", gain: 0.07 }
+    ]);
+  }
+
+  playTreat() {
+    this.playToneSequence([
+      { frequency: 880, start: 0, duration: 0.08, type: "sine", gain: 0.07 }
+    ]);
+  }
+
+  playAwakeningItem() {
+    this.playToneSequence([
+      { frequency: 740, start: 0, duration: 0.07, type: "sine", gain: 0.07 },
+      { frequency: 1040, start: 0.07, duration: 0.09, type: "sine", gain: 0.06 }
+    ]);
+  }
+
+  playAwakenStart() {
+    this.playToneSequence([
+      { frequency: 440, start: 0, duration: 0.12, type: "triangle", gain: 0.08 },
+      { frequency: 660, start: 0.11, duration: 0.14, type: "triangle", gain: 0.08 },
+      { frequency: 990, start: 0.24, duration: 0.18, type: "triangle", gain: 0.07 }
+    ]);
+  }
+
+  playGau() {
+    this.playToneSequence([
+      { frequency: 190, start: 0, duration: 0.09, type: "sawtooth", gain: 0.05 },
+      { frequency: 140, start: 0.08, duration: 0.08, type: "sawtooth", gain: 0.04 }
+    ]);
+  }
+
+  playCombo() {
+    this.playToneSequence([
+      { frequency: 620, start: 0, duration: 0.07, type: "square", gain: 0.05 },
+      { frequency: 840, start: 0.07, duration: 0.1, type: "square", gain: 0.05 }
+    ]);
+  }
+
+  playGameOver() {
+    this.playToneSequence([
+      { frequency: 260, start: 0, duration: 0.14, type: "triangle", gain: 0.08 },
+      { frequency: 160, start: 0.14, duration: 0.18, type: "triangle", gain: 0.08 }
+    ]);
+  }
+
+  playGoal() {
+    this.playToneSequence([
+      { frequency: 520, start: 0, duration: 0.1, type: "triangle", gain: 0.08 },
+      { frequency: 660, start: 0.1, duration: 0.1, type: "triangle", gain: 0.08 },
+      { frequency: 780, start: 0.2, duration: 0.18, type: "triangle", gain: 0.08 }
+    ]);
+  }
+
+  playToneSequence(notes) {
+    if (this.muted) {
+      return;
+    }
+
+    this.resume();
+    if (!this.context || !this.enabled) {
+      return;
+    }
+
+    try {
+      const now = this.context.currentTime;
+      for (const note of notes) {
+        const oscillator = this.context.createOscillator();
+        const gain = this.context.createGain();
+        oscillator.type = note.type;
+        oscillator.frequency.setValueAtTime(note.frequency, now + note.start);
+        gain.gain.setValueAtTime(0.0001, now + note.start);
+        gain.gain.exponentialRampToValueAtTime(note.gain, now + note.start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
+        oscillator.connect(gain);
+        gain.connect(this.context.destination);
+        oscillator.start(now + note.start);
+        oscillator.stop(now + note.start + note.duration + 0.02);
+      }
+    } catch (error) {
+      // Sound is decorative; ignore failures.
+    }
+  }
+}
+
+function readStoredNumber(key, fallbackValue) {
+  try {
+    const value = window.localStorage.getItem(key);
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallbackValue;
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function writeStoredNumber(key, value) {
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch (error) {
+    // Storage is optional.
+  }
+}
+
+function readStoredBoolean(key, fallbackValue) {
+  try {
+    const value = window.localStorage.getItem(key);
+    if (value === null) {
+      return fallbackValue;
+    }
+    return value === "true";
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function writeStoredBoolean(key, value) {
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch (error) {
+    // Storage is optional.
+  }
+}
+
+function addScore(amount, label, x, y) {
+  score = Math.max(0, score + amount);
+  floatingTexts.push(new FloatingText(label, x, y, {
+    color: amount < 0 ? "#d94c4c" : "#1e8f5a"
+  }));
+  updateHud();
+}
+
+function updateHighScore() {
+  if (score > highScore) {
+    highScore = score;
+    writeStoredNumber(STORAGE_KEYS.highScore, highScore);
+  }
+  updateTitleHighScore();
+}
+
+function updateTitleHighScore() {
+  titleHighScoreText.textContent = String(highScore);
+}
+
+function updateSoundHud() {
+  if (!soundManager) {
+    return;
+  }
+  const label = soundManager.muted ? "OFF" : "ON";
+  soundText.textContent = label;
+  muteButton.textContent = soundManager.muted ? "音OFF" : "音ON";
+}
+
+soundManager = new SoundManager();
+highScore = readStoredNumber(STORAGE_KEYS.highScore, 0);
+updateTitleHighScore();
+updateSoundHud();
+
 function resetGame(options = {}) {
   if (options.resetScore) {
     score = 0;
+    awakeningItemCount = 0;
+    isAwakened = false;
+    awakeningTimer = 0;
+    awakeningMessageTimer = 0;
+    statusMessage = "";
+    statusMessageTimer = 0;
   }
   activeCharacterId = options.characterId ?? "ricca";
   input.left = false;
   input.right = false;
+  input.jumpHeld = false;
   input.jumpPressed = false;
   input.switchPressed = false;
-  snacks = getCurrentLevel().snacks.map((snack) => ({ ...snack, collected: false }));
+  items = getCurrentLevel().items.map((item) => ({ ...item, collected: false }));
+  otherDogs = getCurrentLevel().otherDogs.map((otherDog, index) => new OtherDog(otherDog, index));
   cameraX = 0;
   player = new Player(activeCharacterId, characterImages[activeCharacterId]);
   switchEffectTime = 0;
+  mugiStunTimer = 0;
+  messageManager = new MessageManager();
+  floatingTexts = [];
   updateHud();
 }
 
 function startGame() {
+  soundManager.resume();
   currentLevelIndex = 0;
   resetGame({ resetScore: true, characterId: "ricca" });
-  gameState = "playing";
+  gameState = GAME_STATE.PLAYING;
   titleScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
@@ -337,15 +862,21 @@ function startGame() {
 }
 
 function endGame() {
-  gameState = "gameover";
+  gameState = GAME_STATE.GAME_OVER;
+  updateHighScore();
+  soundManager.playGameOver();
   finalScoreText.textContent = String(score);
+  gameOverHighScoreText.textContent = String(highScore);
   gameScreen.classList.add("hidden");
   gameOverScreen.classList.remove("hidden");
 }
 
 function clearLevel() {
-  gameState = "clear";
+  gameState = GAME_STATE.STAGE_CLEAR;
+  updateHighScore();
+  soundManager.playGoal();
   clearScoreText.textContent = String(score);
+  clearHighScoreText.textContent = String(highScore);
   const isLastLevel = currentLevelIndex >= LEVELS.length - 1;
   clearTitle.textContent = isLastLevel ? "ALL CLEAR" : "STAGE CLEAR";
   nextStageButton.textContent = isLastLevel ? "RESTART" : "NEXT STAGE";
@@ -361,10 +892,35 @@ function goToNextStage() {
 
   currentLevelIndex += 1;
   resetGame({ characterId: activeCharacterId });
-  gameState = "playing";
+  gameState = GAME_STATE.PLAYING;
   stageClearScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
   lastTime = performance.now();
+}
+
+function restartCurrentStage() {
+  soundManager.resume();
+  resetGame({ resetScore: true, characterId: "ricca" });
+  gameState = GAME_STATE.PLAYING;
+  titleScreen.classList.add("hidden");
+  gameOverScreen.classList.add("hidden");
+  stageClearScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+  lastTime = performance.now();
+}
+
+function showTitleScreen() {
+  gameState = GAME_STATE.TITLE;
+  input.left = false;
+  input.right = false;
+  input.jumpHeld = false;
+  input.jumpPressed = false;
+  input.switchPressed = false;
+  gameScreen.classList.add("hidden");
+  gameOverScreen.classList.add("hidden");
+  stageClearScreen.classList.add("hidden");
+  titleScreen.classList.remove("hidden");
+  updateTitleHighScore();
 }
 
 function update(deltaTime) {
@@ -375,11 +931,26 @@ function update(deltaTime) {
     input.switchPressed = false;
   }
 
-  player.update(deltaTime, input, level.platforms);
+  const movementInput = { ...input };
+  if (activeCharacterId === "mugi" && mugiStunTimer > 0) {
+    movementInput.left = false;
+    movementInput.right = false;
+  }
+
+  player.update(deltaTime, movementInput, level.platforms);
+  input.jumpPressed = false;
+  input.switchPressed = false;
   cameraX = clamp(player.x - STAGE_CONFIG.cameraLeadX, 0, level.length - CANVAS_CONFIG.width);
   switchEffectTime = Math.max(0, switchEffectTime - deltaTime);
+  mugiStunTimer = Math.max(0, mugiStunTimer - deltaTime * 1000);
+  updateAwakening(deltaTime);
+  statusMessageTimer = Math.max(0, statusMessageTimer - deltaTime);
+  messageManager.update(deltaTime);
+  updateFloatingTexts(deltaTime);
 
-  collectSnacks();
+  collectItems();
+  updateOtherDogs(deltaTime);
+  handleOtherDogEvents();
 
   if (isTouchingGoal()) {
     clearLevel();
@@ -391,8 +962,73 @@ function update(deltaTime) {
   }
 }
 
+function updateOtherDogs(deltaTime) {
+  for (const otherDog of otherDogs) {
+    otherDog.update(deltaTime);
+  }
+}
+
+function updateFloatingTexts(deltaTime) {
+  for (const floatingText of floatingTexts) {
+    floatingText.update(deltaTime);
+  }
+  floatingTexts = floatingTexts.filter((floatingText) => floatingText.isAlive());
+}
+
+function handleOtherDogEvents() {
+  const hitbox = player.getHitbox();
+  const playerCenter = {
+    x: hitbox.x + hitbox.width / 2,
+    y: hitbox.y + hitbox.height / 2
+  };
+
+  for (const otherDog of otherDogs) {
+    if (!otherDog.canTrigger()) {
+      continue;
+    }
+
+    const dogCenter = otherDog.getCenter();
+    const distance = Math.hypot(playerCenter.x - dogCenter.x, playerCenter.y - dogCenter.y);
+    if (distance > OTHER_DOG_CONFIG.eventDistance) {
+      continue;
+    }
+
+    triggerOtherDogEvent(otherDog);
+  }
+}
+
+function triggerOtherDogEvent(otherDog) {
+  if (activeCharacterId === "mugi") {
+    messageManager.add("むぎ：ガウ！", 1.3);
+    mugiStunTimer = OTHER_DOG_CONFIG.mugiStunDuration;
+    addScore(-OTHER_DOG_CONFIG.mugiPenalty, "-5", player.x, player.y - 10);
+    soundManager.playGau();
+    otherDog.triggerReaction("mugi");
+  } else if (isAwakened) {
+    messageManager.add("りっか覚醒中：ビューン！", 1.3);
+    addScore(OTHER_DOG_CONFIG.awakenedBonus, "+10", player.x, player.y - 10);
+    soundManager.playCombo();
+    otherDog.triggerReaction("awakened");
+  } else {
+    messageManager.add("りっか：わん！", 1.3);
+    messageManager.add("むぎ：ガウ！", 1.3, OTHER_DOG_CONFIG.riccaFollowUpDelay / 1000);
+    addScore(OTHER_DOG_CONFIG.riccaComboBonus, "+10 Combo!", player.x, player.y - 10);
+    soundManager.playCombo();
+    soundManager.playGau();
+    otherDog.triggerReaction("ricca");
+  }
+
+  updateHud();
+}
+
 function switchCharacter() {
-  if (gameState !== "playing" || !player.isOnGround) {
+  if (gameState !== GAME_STATE.PLAYING || !player.isOnGround) {
+    return;
+  }
+
+  if (isAwakened) {
+    statusMessage = "覚醒中は交代できません";
+    statusMessageTimer = 1.2;
     return;
   }
 
@@ -410,15 +1046,80 @@ function switchCharacter() {
   updateHud();
 }
 
-function collectSnacks() {
+function collectItems() {
   const hitbox = player.getHitbox();
-  for (const snack of snacks) {
-    if (!snack.collected && circleIntersectsRect(snack.x, snack.y, 16, hitbox)) {
-      snack.collected = true;
-      score += STAGE_CONFIG.snackScore;
+  for (const item of items) {
+    const radius = item.type === "awakening" ? 18 : 16;
+    if (!item.collected && circleIntersectsRect(item.x, item.y, radius, hitbox)) {
+      item.collected = true;
+      if (item.type === "awakening") {
+        addScore(STAGE_CONFIG.awakeningItemScore, "+30", item.x, item.y - 22);
+        soundManager.playAwakeningItem();
+        collectAwakeningItem();
+      } else {
+        addScore(STAGE_CONFIG.snackScore, "+10", item.x, item.y - 22);
+        soundManager.playTreat();
+      }
       updateHud();
     }
   }
+}
+
+function collectAwakeningItem() {
+  if (isAwakened) {
+    return;
+  }
+
+  awakeningItemCount += 1;
+  if (awakeningItemCount >= AWAKENING_CONFIG.requiredItems) {
+    startAwakening();
+  }
+}
+
+function startAwakening() {
+  awakeningItemCount = 0;
+  isAwakened = true;
+  awakeningTimer = AWAKENING_CONFIG.duration;
+  awakeningMessageTimer = AWAKENING_CONFIG.messageDuration;
+  statusMessage = "りっか覚醒！";
+  statusMessageTimer = AWAKENING_CONFIG.messageDuration / 1000;
+  soundManager.playAwakenStart();
+
+  if (activeCharacterId !== "ricca") {
+    activeCharacterId = "ricca";
+    player = new Player("ricca", characterImages.ricca, {
+      x: player.x,
+      y: player.y,
+      vx: player.vx,
+      vy: player.vy,
+      facing: player.facing,
+      isOnGround: player.isOnGround
+    });
+  }
+
+  const direction = player.facing === "left" ? -1 : 1;
+  player.vx = direction * AWAKENING_CONFIG.riccaAwakenedStats.minSlideSpeed;
+  switchEffectTime = 0.9;
+  updateHud();
+}
+
+function updateAwakening(deltaTime) {
+  if (!isAwakened) {
+    return;
+  }
+
+  awakeningTimer = Math.max(0, awakeningTimer - deltaTime * 1000);
+  awakeningMessageTimer = Math.max(0, awakeningMessageTimer - deltaTime * 1000);
+
+  if (awakeningTimer <= 0) {
+    isAwakened = false;
+    awakeningTimer = 0;
+    statusMessage = "りっか通常モード";
+    statusMessageTimer = 1.2;
+    player.vx *= 0.35;
+  }
+
+  updateHud();
 }
 
 function isTouchingObstacle() {
@@ -434,11 +1135,17 @@ function draw() {
   ctx.clearRect(0, 0, CANVAS_CONFIG.width, CANVAS_CONFIG.height);
   drawBackground();
   drawPlatforms();
-  drawSnacks();
+  drawItems();
   drawObstacles();
+  drawOtherDogs();
   drawGoalFlag();
+  drawAwakeningAura();
   player.draw(ctx, cameraX);
   drawSwitchEffect();
+  drawAwakeningMessage();
+  drawStatusMessage();
+  messageManager.draw(ctx);
+  drawFloatingTexts();
 }
 
 function drawBackground() {
@@ -503,22 +1210,68 @@ function drawObstacles() {
   }
 }
 
-function drawSnacks() {
-  for (const snack of snacks) {
-    if (snack.collected) {
+function drawOtherDogs() {
+  for (const otherDog of otherDogs) {
+    otherDog.draw(ctx, cameraX, otherDogImages);
+  }
+}
+
+function drawItems() {
+  for (const item of items) {
+    if (item.collected) {
       continue;
     }
 
-    const x = snack.x - cameraX;
-    ctx.fillStyle = "#f1a93c";
-    ctx.beginPath();
-    ctx.arc(x, snack.y, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fff0c7";
-    ctx.beginPath();
-    ctx.arc(x - 5, snack.y - 5, 4, 0, Math.PI * 2);
-    ctx.fill();
+    if (item.type === "awakening") {
+      drawAwakeningItem(item.x - cameraX, item.y);
+    } else {
+      drawTreat(item.x - cameraX, item.y);
+    }
   }
+}
+
+function drawTreat(x, y) {
+  ctx.fillStyle = "#f1a93c";
+  ctx.beginPath();
+  ctx.arc(x, y, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff0c7";
+  ctx.beginPath();
+  ctx.arc(x - 5, y - 5, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAwakeningItem(x, y) {
+  const pulse = 1 + Math.sin(performance.now() / 140) * 0.08;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(pulse, pulse);
+  ctx.fillStyle = "rgba(255, 207, 79, 0.28)";
+  ctx.beginPath();
+  ctx.arc(0, 0, 25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#b965ff";
+  drawStar(0, 0, 18, 8, 5);
+  ctx.fillStyle = "#ffef8a";
+  drawStar(0, 0, 10, 4, 5);
+  ctx.restore();
+}
+
+function drawStar(x, y, outerRadius, innerRadius, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i += 1) {
+    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+    const angle = -Math.PI / 2 + (i * Math.PI) / points;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawGoalFlag() {
@@ -565,11 +1318,74 @@ function drawSwitchEffect() {
   ctx.restore();
 }
 
+function drawAwakeningAura() {
+  if (!isAwakened || activeCharacterId !== "ricca") {
+    return;
+  }
+
+  const hitbox = player.getHitbox();
+  const centerX = hitbox.x - cameraX + hitbox.width / 2;
+  const centerY = hitbox.y + hitbox.height / 2;
+  const pulse = Math.sin(performance.now() / 90) * 6;
+
+  ctx.save();
+  ctx.globalAlpha = 0.65;
+  ctx.strokeStyle = "#ffcf4f";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, 54 + pulse, 40 + pulse * 0.5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = "#b965ff";
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, 70 + pulse, 48 + pulse * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAwakeningMessage() {
+  if (awakeningMessageTimer <= 0) {
+    return;
+  }
+
+  const alpha = awakeningMessageTimer / AWAKENING_CONFIG.messageDuration;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#1e425b";
+  ctx.font = "bold 54px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("りっか覚醒！", CANVAS_CONFIG.width / 2, 128);
+  ctx.fillStyle = "#ffcf4f";
+  ctx.font = "bold 34px system-ui, sans-serif";
+  ctx.fillText("TRANCE!", CANVAS_CONFIG.width / 2, 174);
+  ctx.restore();
+}
+
+function drawStatusMessage() {
+  if (statusMessageTimer <= 0 || !statusMessage) {
+    return;
+  }
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, statusMessageTimer);
+  ctx.fillStyle = "#1e425b";
+  ctx.font = "bold 24px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(statusMessage, CANVAS_CONFIG.width / 2, 220);
+  ctx.restore();
+}
+
+function drawFloatingTexts() {
+  for (const floatingText of floatingTexts) {
+    floatingText.draw(ctx, cameraX);
+  }
+}
+
 function gameLoop(currentTime) {
   const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.033);
   lastTime = currentTime;
 
-  if (gameState === "playing") {
+  if (gameState === GAME_STATE.PLAYING) {
     update(deltaTime);
     draw();
   }
@@ -580,7 +1396,22 @@ function gameLoop(currentTime) {
 function updateHud() {
   stageText.textContent = getCurrentLevel().name;
   scoreText.textContent = String(score);
-  characterText.textContent = CHARACTER_CONFIGS[activeCharacterId].displayName;
+  const displayName = CHARACTER_CONFIGS[activeCharacterId].displayName;
+  characterText.textContent = isAwakened && activeCharacterId === "ricca" ? `${displayName} 覚醒中！` : displayName;
+
+  if (isAwakened) {
+    const remainingSeconds = (awakeningTimer / 1000).toFixed(1);
+    awakeningText.textContent = `${remainingSeconds}s`;
+    awakeningBar.classList.add("active");
+    awakeningBar.classList.toggle("warning", awakeningTimer < 1500);
+    awakeningBar.style.transform = `scaleX(${awakeningTimer / AWAKENING_CONFIG.duration})`;
+  } else {
+    awakeningText.textContent = `${awakeningItemCount}/${AWAKENING_CONFIG.requiredItems}`;
+    awakeningBar.classList.remove("active");
+    awakeningBar.classList.remove("warning");
+    awakeningBar.style.transform = `scaleX(${awakeningItemCount / AWAKENING_CONFIG.requiredItems})`;
+  }
+  updateSoundHud();
 }
 
 function getCurrentLevel() {
@@ -609,6 +1440,10 @@ function loadCharacterImages() {
   });
 
   return Promise.all(entries).then((loadedEntries) => Object.fromEntries(loadedEntries));
+}
+
+function loadOtherDogImages() {
+  return Promise.all(OTHER_DOG_IMAGE_PATHS.map(loadSpriteImage));
 }
 
 function loadSpriteImage(src) {
@@ -721,6 +1556,27 @@ function setTapButton(button, action) {
   button.addEventListener("pointerleave", release);
 }
 
+function setJumpButton(button) {
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (!input.jumpHeld) {
+      input.jumpPressed = true;
+    }
+    input.jumpHeld = true;
+    button.classList.add("pressed");
+  });
+
+  const release = (event) => {
+    event.preventDefault();
+    input.jumpHeld = false;
+    button.classList.remove("pressed");
+  };
+
+  button.addEventListener("pointerup", release);
+  button.addEventListener("pointercancel", release);
+  button.addEventListener("pointerleave", release);
+}
+
 window.addEventListener("keydown", (event) => {
   if (event.code === "ArrowLeft") {
     input.left = true;
@@ -729,12 +1585,18 @@ window.addEventListener("keydown", (event) => {
     input.right = true;
   }
   if (event.code === "Space" || event.code === "ArrowUp") {
-    input.jumpPressed = true;
+    if (!input.jumpHeld) {
+      input.jumpPressed = true;
+    }
+    input.jumpHeld = true;
   }
   if ((event.code === "KeyC" || event.code === "Tab") && !event.repeat) {
     input.switchPressed = true;
   }
-  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyC", "Tab"].includes(event.code)) {
+  if (event.code === "KeyM" && !event.repeat) {
+    soundManager.toggleMuted();
+  }
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyC", "KeyM", "Tab"].includes(event.code)) {
     event.preventDefault();
   }
 });
@@ -746,24 +1608,33 @@ window.addEventListener("keyup", (event) => {
   if (event.code === "ArrowRight") {
     input.right = false;
   }
+  if (event.code === "Space" || event.code === "ArrowUp") {
+    input.jumpHeld = false;
+  }
 });
 
 window.addEventListener("contextmenu", (event) => event.preventDefault());
 
 startButton.addEventListener("click", startGame);
-restartButton.addEventListener("click", startGame);
+restartButton.addEventListener("click", restartCurrentStage);
 nextStageButton.addEventListener("click", goToNextStage);
+clearRestartButton.addEventListener("click", restartCurrentStage);
+clearTitleButton.addEventListener("click", showTitleScreen);
+gameOverTitleButton.addEventListener("click", showTitleScreen);
+muteButton.addEventListener("click", () => {
+  soundManager.resume();
+  soundManager.toggleMuted();
+});
 setButtonHold(document.getElementById("leftButton"), "left");
 setButtonHold(document.getElementById("rightButton"), "right");
-setTapButton(document.getElementById("jumpButton"), () => {
-  input.jumpPressed = true;
-});
+setJumpButton(document.getElementById("jumpButton"));
 setTapButton(document.getElementById("switchButton"), () => {
   input.switchPressed = true;
 });
 
-loadCharacterImages().then((images) => {
+Promise.all([loadCharacterImages(), loadOtherDogImages()]).then(([images, loadedOtherDogImages]) => {
   characterImages = images;
+  otherDogImages = loadedOtherDogImages;
   resetGame({ resetScore: true, characterId: "ricca" });
   draw();
   requestAnimationFrame((time) => {
