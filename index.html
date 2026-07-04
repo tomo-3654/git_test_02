@@ -3,45 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="犬の横スクロールアクションゲーム Ver.0.1">
   <title>りっかの横スクロールアクション Ver.0.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="game-shell" aria-label="りっかの横スクロールアクションゲーム">
-    <section class="game-panel">
-      <canvas id="gameCanvas" width="960" height="540" aria-label="ゲーム画面"></canvas>
-
-      <div id="titleScreen" class="screen-overlay is-visible">
-        <div class="screen-card">
-          <p class="screen-kicker">HTML5 Canvas Prototype</p>
-          <h1>りっかの<br>おやつロード</h1>
-          <p class="screen-text">穴と障害物を避けて、おやつを集めよう！</p>
-          <button id="startButton" class="primary-button" type="button">START</button>
-        </div>
-      </div>
-
-      <div id="gameOverScreen" class="screen-overlay" aria-live="polite">
-        <div class="screen-card">
-          <p class="screen-kicker">Ver.0.1</p>
-          <h2>GAME OVER</h2>
-          <p class="score-readout">最終スコア：<span id="finalScore">0</span></p>
-          <button id="restartButton" class="primary-button" type="button">RESTART</button>
-        </div>
+  <main class="game-shell">
+    <section id="titleScreen" class="screen overlay-screen">
+      <h1>りっかのさんぽ道</h1>
+      <p class="lead">おやつを集めながら、穴と障害物をジャンプで越えよう。</p>
+      <button id="startButton" class="menu-button" type="button">START</button>
+      <div class="help">
+        <p>PC: ← → で移動 / Space または ↑ でジャンプ</p>
+        <p>スマホ: 画面下のボタンで操作</p>
       </div>
     </section>
 
-    <section class="help-panel" aria-label="操作説明">
-      <p><strong>PC:</strong> ← → で移動 / SPACE または ↑ でジャンプ</p>
-      <p><strong>スマホ:</strong> 画面下のボタンを押しっぱなしで操作</p>
+    <section id="gameScreen" class="screen game-screen hidden">
+      <div class="hud">
+        <span id="stageText">Stage 1</span>
+        <span>Score</span>
+        <strong id="scoreText">0</strong>
+        <span>Character</span>
+        <strong id="characterText">りっか</strong>
+        <span class="switch-help">C / Tab: 交代</span>
+      </div>
+      <canvas id="gameCanvas" width="960" height="540" aria-label="りっかの横スクロールアクションゲーム"></canvas>
+      <div class="mobile-controls" aria-label="スマホ操作">
+        <button id="leftButton" class="control-button" type="button">←</button>
+        <button id="jumpButton" class="control-button jump" type="button">JUMP</button>
+        <button id="rightButton" class="control-button" type="button">→</button>
+        <button id="switchButton" class="control-button switch" type="button">交代</button>
+      </div>
+    </section>
+
+    <section id="gameOverScreen" class="screen overlay-screen hidden">
+      <h2>GAME OVER</h2>
+      <p class="final-score">Score: <strong id="finalScoreText">0</strong></p>
+      <button id="restartButton" class="menu-button" type="button">RESTART</button>
+    </section>
+
+    <section id="stageClearScreen" class="screen overlay-screen hidden">
+      <h2 id="clearTitle">STAGE CLEAR</h2>
+      <p class="final-score">Score: <strong id="clearScoreText">0</strong></p>
+      <button id="nextStageButton" class="menu-button" type="button">NEXT STAGE</button>
     </section>
   </main>
-
-  <nav class="mobile-controls" aria-label="スマホ用操作ボタン">
-    <button class="control-button" type="button" data-action="left" aria-label="左へ移動">左</button>
-    <button class="control-button" type="button" data-action="jump" aria-label="ジャンプ">ジャンプ</button>
-    <button class="control-button" type="button" data-action="right" aria-label="右へ移動">右</button>
-  </nav>
 
   <script src="script.js"></script>
 </body>
