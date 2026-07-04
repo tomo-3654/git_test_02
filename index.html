@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>りっかの横スクロールアクション Ver.0.5</title>
+  <title>りっかの横スクロールアクション Ver.0.5.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,28 +20,32 @@
     </section>
 
     <section id="gameScreen" class="screen game-screen hidden">
-      <div class="hud">
-        <span id="stageText">Stage 1</span>
-        <span>Score</span>
-        <strong id="scoreText">0</strong>
-        <span>Character</span>
-        <strong id="characterText">りっか</strong>
-        <span>Awaken</span>
-        <strong id="awakeningText">0/3</strong>
-        <span>Sound</span>
-        <strong id="soundText">ON</strong>
-        <span class="switch-help">C / Tab: 交代</span>
+      <div class="hud-panel">
+        <div class="hud-row primary">
+          <span id="stageText">Stage 1</span>
+          <span>Score <strong id="scoreText">0</strong></span>
+          <span>Character <strong id="characterText">りっか</strong></span>
+        </div>
+        <div class="hud-row secondary">
+          <span>Awaken <strong id="awakeningText">0/3</strong></span>
+          <span>Sound <strong id="soundText">ON</strong></span>
+          <span class="switch-help">C / Tab: 交代</span>
+        </div>
       </div>
       <div class="awakening-meter" aria-label="覚醒ゲージ">
         <div id="awakeningBar" class="awakening-bar"></div>
       </div>
       <canvas id="gameCanvas" width="960" height="540" aria-label="りっかの横スクロールアクションゲーム"></canvas>
       <div class="mobile-controls" aria-label="スマホ操作">
-        <button id="leftButton" class="control-button" type="button">←</button>
-        <button id="jumpButton" class="control-button jump" type="button">JUMP</button>
-        <button id="rightButton" class="control-button" type="button">→</button>
-        <button id="switchButton" class="control-button switch" type="button">交代</button>
-        <button id="muteButton" class="control-button mute" type="button">音ON</button>
+        <div class="mobile-controls-main">
+          <button id="leftButton" class="control-button" type="button">←</button>
+          <button id="rightButton" class="control-button" type="button">→</button>
+          <button id="switchButton" class="control-button switch" type="button">交代</button>
+          <button id="jumpButton" class="control-button jump" type="button">JUMP</button>
+        </div>
+        <div class="mobile-controls-secondary">
+          <button id="muteButton" class="control-button mute" type="button">音ON</button>
+        </div>
       </div>
     </section>
 
