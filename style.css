@@ -100,6 +100,12 @@ button {
   transform: translateY(4px);
 }
 
+.menu-button.selected {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+  transform: scale(1.04);
+}
+
 .menu-button.secondary {
   background: #ffffff;
   box-shadow: 0 6px 0 #8aa8ba;

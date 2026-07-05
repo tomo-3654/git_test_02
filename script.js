@@ -2,6 +2,7 @@
 
 const DEBUG_HITBOX = false;
 const DEBUG_STAGE = false;
+const DEBUG_GAMEPAD = false;
 const RANDOM_SEED = null;
 
 const CANVAS_CONFIG = {
@@ -21,6 +22,37 @@ const STORAGE_KEYS = {
   highScore: "ricca_mugi_game_high_score",
   muted: "ricca_mugi_game_muted"
 };
+
+const AUDIO_CONFIG = {
+  bgmVolume: 0.35,
+  tranceBgmVolume: 0.45,
+  sfxVolume: 0.7
+};
+
+const BGM_TRACKS = {
+  stage: [
+    "assets/sounds/mugi_ricca_BGM_01.mp3",
+    "assets/sounds/mugi_ricca_BGM_02.mp3",
+    "assets/sounds/mugi_ricca_BGM_03.mp3",
+    "assets/sounds/mugi_ricca_BGM_04.mp3",
+    "assets/sounds/mugi_ricca_BGM_05.mp3",
+    "assets/sounds/mugi_ricca_BGM_06.mp3"
+  ],
+  trance: "assets/sounds/ricca_trance_BGM.mp3"
+};
+
+const GAMEPAD_MAPPING = {
+  A: 0,
+  B: 1,
+  SELECT: 8,
+  START: 9,
+  DPAD_UP: 12,
+  DPAD_DOWN: 13,
+  DPAD_LEFT: 14,
+  DPAD_RIGHT: 15
+};
+
+const GAMEPAD_AXIS_THRESHOLD = 0.5;
 
 const STAGE_CONFIG = {
   totalStages: 5,
@@ -278,6 +310,7 @@ const gameOverScreen = document.getElementById("gameOverScreen");
 const stageClearScreen = document.getElementById("stageClearScreen");
 const endingScreen = document.getElementById("endingScreen");
 const startButton = document.getElementById("startButton");
+const titleSoundButton = document.getElementById("titleSoundButton");
 const restartButton = document.getElementById("restartButton");
 const continueButton = document.getElementById("continueButton");
 const nextStageButton = document.getElementById("nextStageButton");
@@ -293,6 +326,7 @@ const characterText = document.getElementById("characterText");
 const awakeningText = document.getElementById("awakeningText");
 const awakeningBar = document.getElementById("awakeningBar");
 const soundText = document.getElementById("soundText");
+const padText = document.getElementById("padText");
 const titleHighScoreText = document.getElementById("titleHighScoreText");
 const finalScoreText = document.getElementById("finalScoreText");
 const gameOverHighScoreText = document.getElementById("gameOverHighScoreText");
@@ -307,7 +341,12 @@ const input = {
   right: false,
   jumpHeld: false,
   jumpPressed: false,
-  switchPressed: false
+  switchPressed: false,
+  soundTogglePressed: false,
+  menuUpPressed: false,
+  menuDownPressed: false,
+  menuSelectPressed: false,
+  menuBackPressed: false
 };
 
 let characterImages = {};
@@ -334,6 +373,8 @@ let statusMessageTimer = 0;
 let mugiStunTimer = 0;
 let messageManager;
 let soundManager;
+let gamepadManager;
+let menuManager;
 let floatingTexts = [];
 
 class Player {
@@ -715,6 +756,11 @@ class SoundManager {
     this.context = null;
     this.enabled = false;
     this.muted = readStoredBoolean(STORAGE_KEYS.muted, false);
+    this.stageBgm = null;
+    this.tranceBgm = null;
+    this.currentStageTrackPath = null;
+    this.previousStageTrackPath = null;
+    this.isTranceBgmPlaying = false;
   }
 
   init() {
@@ -751,6 +797,11 @@ class SoundManager {
   setMuted(value) {
     this.muted = value;
     writeStoredBoolean(STORAGE_KEYS.muted, value);
+    if (this.muted) {
+      this.pauseBgm();
+    } else if (gameState === GAME_STATE.PLAYING) {
+      this.resumeBgm();
+    }
     updateSoundHud();
   }
 
@@ -823,6 +874,126 @@ class SoundManager {
     ]);
   }
 
+  startStageBgm() {
+    this.resume();
+    const trackPath = this.chooseStageTrack();
+    this.previousStageTrackPath = this.currentStageTrackPath;
+    this.currentStageTrackPath = trackPath;
+    this.isTranceBgmPlaying = false;
+    this.stopAudio(this.tranceBgm, true);
+    this.tranceBgm = null;
+    this.stopAudio(this.stageBgm, true);
+    this.stageBgm = this.createLoopingAudio(trackPath, AUDIO_CONFIG.bgmVolume);
+    this.playAudio(this.stageBgm);
+  }
+
+  switchToTranceBgm() {
+    this.resume();
+    this.isTranceBgmPlaying = true;
+    this.pauseAudio(this.stageBgm);
+    this.stopAudio(this.tranceBgm, true);
+    this.tranceBgm = this.createLoopingAudio(BGM_TRACKS.trance, AUDIO_CONFIG.tranceBgmVolume);
+    this.playAudio(this.tranceBgm);
+  }
+
+  returnToStageBgm() {
+    this.isTranceBgmPlaying = false;
+    this.stopAudio(this.tranceBgm, true);
+    this.tranceBgm = null;
+    if (gameState === GAME_STATE.PLAYING) {
+      this.playAudio(this.stageBgm);
+    }
+  }
+
+  stopBgm() {
+    this.isTranceBgmPlaying = false;
+    this.stopAudio(this.stageBgm, false);
+    this.stopAudio(this.tranceBgm, true);
+    this.tranceBgm = null;
+  }
+
+  pauseBgm() {
+    this.pauseAudio(this.stageBgm);
+    this.pauseAudio(this.tranceBgm);
+  }
+
+  resumeBgm() {
+    if (this.isTranceBgmPlaying) {
+      this.playAudio(this.tranceBgm);
+    } else {
+      this.playAudio(this.stageBgm);
+    }
+  }
+
+  chooseStageTrack() {
+    if (BGM_TRACKS.stage.length === 0) {
+      return "";
+    }
+
+    const availableTracks = BGM_TRACKS.stage.length > 1
+      ? BGM_TRACKS.stage.filter((track) => track !== this.currentStageTrackPath)
+      : BGM_TRACKS.stage;
+    return availableTracks[Math.floor(Math.random() * availableTracks.length)];
+  }
+
+  createLoopingAudio(src, volume) {
+    if (!src) {
+      return null;
+    }
+
+    try {
+      const audio = new Audio(src);
+      audio.loop = true;
+      audio.volume = volume;
+      audio.preload = "auto";
+      return audio;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  playAudio(audio) {
+    if (!audio || this.muted) {
+      return;
+    }
+
+    try {
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    } catch (error) {
+      // BGM is optional. Continue silently if playback is unavailable.
+    }
+  }
+
+  pauseAudio(audio) {
+    if (!audio) {
+      return;
+    }
+
+    try {
+      audio.pause();
+    } catch (error) {
+      // Ignore optional audio failures.
+    }
+  }
+
+  stopAudio(audio, resetToStart) {
+    if (!audio) {
+      return;
+    }
+
+    try {
+      audio.pause();
+      if (resetToStart) {
+        audio.currentTime = 0;
+      }
+    } catch (error) {
+      // Ignore optional audio failures.
+    }
+  }
+
   playToneSequence(notes) {
     if (this.muted) {
       return;
@@ -841,7 +1012,7 @@ class SoundManager {
         oscillator.type = note.type;
         oscillator.frequency.setValueAtTime(note.frequency, now + note.start);
         gain.gain.setValueAtTime(0.0001, now + note.start);
-        gain.gain.exponentialRampToValueAtTime(note.gain, now + note.start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(note.gain * AUDIO_CONFIG.sfxVolume, now + note.start + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
         oscillator.connect(gain);
         gain.connect(this.context.destination);
@@ -851,6 +1022,166 @@ class SoundManager {
     } catch (error) {
       // Sound is decorative; ignore failures.
     }
+  }
+}
+
+class GamepadManager {
+  constructor() {
+    this.connected = false;
+    this.currentButtons = {};
+    this.previousButtons = {};
+    this.leftHeld = false;
+    this.rightHeld = false;
+    this.lastDebugTime = 0;
+  }
+
+  update() {
+    this.previousButtons = { ...this.currentButtons };
+    this.currentButtons = {};
+    this.leftHeld = false;
+    this.rightHeld = false;
+
+    const gamepad = this.getPrimaryGamepad();
+    this.connected = Boolean(gamepad);
+    if (!gamepad) {
+      updateGamepadHud();
+      return;
+    }
+
+    this.currentButtons.A = this.isButtonDown(gamepad, GAMEPAD_MAPPING.A);
+    this.currentButtons.B = this.isButtonDown(gamepad, GAMEPAD_MAPPING.B);
+    this.currentButtons.SELECT = this.isButtonDown(gamepad, GAMEPAD_MAPPING.SELECT);
+    this.currentButtons.START = this.isButtonDown(gamepad, GAMEPAD_MAPPING.START);
+    this.currentButtons.DPAD_UP = this.isButtonDown(gamepad, GAMEPAD_MAPPING.DPAD_UP) || this.getAxis(gamepad, 1) < -GAMEPAD_AXIS_THRESHOLD;
+    this.currentButtons.DPAD_DOWN = this.isButtonDown(gamepad, GAMEPAD_MAPPING.DPAD_DOWN) || this.getAxis(gamepad, 1) > GAMEPAD_AXIS_THRESHOLD;
+    this.currentButtons.DPAD_LEFT = this.isButtonDown(gamepad, GAMEPAD_MAPPING.DPAD_LEFT) || this.getAxis(gamepad, 0) < -GAMEPAD_AXIS_THRESHOLD;
+    this.currentButtons.DPAD_RIGHT = this.isButtonDown(gamepad, GAMEPAD_MAPPING.DPAD_RIGHT) || this.getAxis(gamepad, 0) > GAMEPAD_AXIS_THRESHOLD;
+    this.leftHeld = this.currentButtons.DPAD_LEFT;
+    this.rightHeld = this.currentButtons.DPAD_RIGHT;
+
+    if (DEBUG_GAMEPAD) {
+      this.debug(gamepad);
+    }
+    updateGamepadHud();
+  }
+
+  getPrimaryGamepad() {
+    if (!navigator.getGamepads) {
+      return null;
+    }
+
+    try {
+      return Array.from(navigator.getGamepads()).find((gamepad) => gamepad && gamepad.connected) ?? null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  isButtonDown(gamepad, buttonIndex) {
+    const button = gamepad.buttons?.[buttonIndex];
+    return Boolean(button?.pressed || button?.value > 0.5);
+  }
+
+  getAxis(gamepad, axisIndex) {
+    return gamepad.axes?.[axisIndex] ?? 0;
+  }
+
+  isPressed(buttonName) {
+    return Boolean(this.currentButtons[buttonName] && !this.previousButtons[buttonName]);
+  }
+
+  isHeld(buttonName) {
+    return Boolean(this.currentButtons[buttonName]);
+  }
+
+  debug(gamepad) {
+    const now = performance.now();
+    if (now - this.lastDebugTime < 500) {
+      return;
+    }
+    this.lastDebugTime = now;
+    const pressedButtons = gamepad.buttons
+      .map((button, index) => button.pressed ? index : null)
+      .filter((index) => index !== null);
+    if (pressedButtons.length || Math.abs(this.getAxis(gamepad, 0)) > 0.1 || Math.abs(this.getAxis(gamepad, 1)) > 0.1) {
+      console.log("Gamepad", {
+        id: gamepad.id,
+        pressedButtons,
+        axes: gamepad.axes
+      });
+    }
+  }
+}
+
+class MenuManager {
+  constructor() {
+    this.selectedIndexByState = {
+      [GAME_STATE.TITLE]: 0,
+      [GAME_STATE.GAME_OVER]: 0,
+      [GAME_STATE.STAGE_CLEAR]: 0,
+      [GAME_STATE.ENDING]: 0
+    };
+  }
+
+  resetForState(state) {
+    this.selectedIndexByState[state] = 0;
+    this.updateSelection();
+  }
+
+  getButtons() {
+    if (gameState === GAME_STATE.TITLE) {
+      return [startButton, titleSoundButton];
+    }
+    if (gameState === GAME_STATE.GAME_OVER) {
+      return [continueButton, restartButton, gameOverTitleButton];
+    }
+    if (gameState === GAME_STATE.STAGE_CLEAR) {
+      return [nextStageButton, clearRestartButton, clearTitleButton];
+    }
+    if (gameState === GAME_STATE.ENDING) {
+      return [endingPlayAgainButton, endingTitleButton];
+    }
+    return [];
+  }
+
+  move(direction) {
+    const buttons = this.getButtons();
+    if (buttons.length === 0) {
+      return;
+    }
+    const currentIndex = this.selectedIndexByState[gameState] ?? 0;
+    this.selectedIndexByState[gameState] = (currentIndex + direction + buttons.length) % buttons.length;
+    this.updateSelection();
+  }
+
+  select() {
+    const buttons = this.getButtons();
+    if (buttons.length === 0) {
+      return;
+    }
+    const currentIndex = this.selectedIndexByState[gameState] ?? 0;
+    buttons[currentIndex]?.click();
+  }
+
+  back() {
+    if (gameState === GAME_STATE.TITLE) {
+      return;
+    }
+    showTitleScreen();
+  }
+
+  updateSelection() {
+    for (const button of document.querySelectorAll(".menu-button.selected")) {
+      button.classList.remove("selected");
+    }
+
+    const buttons = this.getButtons();
+    if (buttons.length === 0) {
+      return;
+    }
+    const currentIndex = clamp(this.selectedIndexByState[gameState] ?? 0, 0, buttons.length - 1);
+    this.selectedIndexByState[gameState] = currentIndex;
+    buttons[currentIndex]?.classList.add("selected");
   }
 }
 
@@ -919,6 +1250,14 @@ function updateSoundHud() {
   const label = soundManager.muted ? "OFF" : "ON";
   soundText.textContent = label;
   muteButton.textContent = soundManager.muted ? "音OFF" : "音ON";
+  titleSoundButton.textContent = soundManager.muted ? "SOUND OFF" : "SOUND ON";
+}
+
+function updateGamepadHud() {
+  if (!padText || !gamepadManager) {
+    return;
+  }
+  padText.textContent = gamepadManager.connected ? "ON" : "OFF";
 }
 
 function createRandom() {
@@ -1169,9 +1508,13 @@ function generateCurrentStage() {
 }
 
 soundManager = new SoundManager();
+gamepadManager = new GamepadManager();
+menuManager = new MenuManager();
 highScore = readStoredNumber(STORAGE_KEYS.highScore, 0);
 updateTitleHighScore();
 updateSoundHud();
+updateGamepadHud();
+menuManager.updateSelection();
 
 function resetGame(options = {}) {
   if (options.resetScore) {
@@ -1213,23 +1556,27 @@ function startGame() {
   generateCurrentStage();
   resetGame({ resetScore: true, characterId: "ricca" });
   gameState = GAME_STATE.PLAYING;
+  soundManager.startStageBgm();
   titleScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
   endingScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
+  menuManager.updateSelection();
   lastTime = performance.now();
 }
 
 function endGame() {
   gameState = GAME_STATE.GAME_OVER;
   updateHighScore();
+  soundManager.stopBgm();
   soundManager.playGameOver();
   finalScoreText.textContent = String(score);
   gameOverHighScoreText.textContent = String(highScore);
   gameScreen.classList.add("hidden");
   endingScreen.classList.add("hidden");
   gameOverScreen.classList.remove("hidden");
+  menuManager.resetForState(GAME_STATE.GAME_OVER);
 }
 
 function clearLevel() {
@@ -1239,6 +1586,7 @@ function clearLevel() {
   }
 
   gameState = GAME_STATE.STAGE_CLEAR;
+  soundManager.stopBgm();
   soundManager.playGoal();
   clearScoreText.textContent = String(score);
   clearHighScoreText.textContent = String(highScore);
@@ -1248,6 +1596,7 @@ function clearLevel() {
   gameOverScreen.classList.add("hidden");
   endingScreen.classList.add("hidden");
   stageClearScreen.classList.remove("hidden");
+  menuManager.resetForState(GAME_STATE.STAGE_CLEAR);
 }
 
 function goToNextStage() {
@@ -1260,8 +1609,10 @@ function goToNextStage() {
   generateCurrentStage();
   resetGame({ characterId: activeCharacterId, resetAwakening: true });
   gameState = GAME_STATE.PLAYING;
+  soundManager.startStageBgm();
   stageClearScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
+  menuManager.updateSelection();
   lastTime = performance.now();
 }
 
@@ -1271,16 +1622,19 @@ function continueCurrentStage() {
   generateCurrentStage();
   resetGame({ characterId: "ricca", resetAwakening: true });
   gameState = GAME_STATE.PLAYING;
+  soundManager.startStageBgm();
   titleScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
   endingScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
+  menuManager.updateSelection();
   lastTime = performance.now();
 }
 
 function showTitleScreen() {
   gameState = GAME_STATE.TITLE;
+  soundManager.stopBgm();
   input.left = false;
   input.right = false;
   input.jumpHeld = false;
@@ -1292,11 +1646,13 @@ function showTitleScreen() {
   endingScreen.classList.add("hidden");
   titleScreen.classList.remove("hidden");
   updateTitleHighScore();
+  menuManager.resetForState(GAME_STATE.TITLE);
 }
 
 function showEnding() {
   gameState = GAME_STATE.ENDING;
   updateHighScore();
+  soundManager.stopBgm();
   soundManager.playGoal();
   endingScoreText.textContent = String(score);
   endingHighScoreText.textContent = String(highScore);
@@ -1305,6 +1661,7 @@ function showEnding() {
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
   endingScreen.classList.remove("hidden");
+  menuManager.resetForState(GAME_STATE.ENDING);
 }
 
 function update(deltaTime) {
@@ -1315,7 +1672,11 @@ function update(deltaTime) {
     input.switchPressed = false;
   }
 
-  const movementInput = { ...input };
+  const movementInput = {
+    ...input,
+    left: input.left || Boolean(gamepadManager?.leftHeld),
+    right: input.right || Boolean(gamepadManager?.rightHeld)
+  };
   if (activeCharacterId === "mugi" && mugiStunTimer > 0) {
     movementInput.left = false;
     movementInput.right = false;
@@ -1324,6 +1685,11 @@ function update(deltaTime) {
   player.update(deltaTime, movementInput, level.platforms);
   input.jumpPressed = false;
   input.switchPressed = false;
+  input.soundTogglePressed = false;
+  input.menuUpPressed = false;
+  input.menuDownPressed = false;
+  input.menuSelectPressed = false;
+  input.menuBackPressed = false;
   cameraX = clamp(player.x - STAGE_CONFIG.cameraLeadX, 0, level.length - CANVAS_CONFIG.width);
   switchEffectTime = Math.max(0, switchEffectTime - deltaTime);
   mugiStunTimer = Math.max(0, mugiStunTimer - deltaTime * 1000);
@@ -1486,6 +1852,7 @@ function startAwakening() {
   awakeningMessageTimer = AWAKENING_CONFIG.messageDuration;
   statusMessage = "りっか覚醒！";
   statusMessageTimer = AWAKENING_CONFIG.messageDuration / 1000;
+  soundManager.switchToTranceBgm();
   soundManager.playAwakenStart();
 
   if (activeCharacterId !== "ricca") {
@@ -1520,6 +1887,7 @@ function updateAwakening(deltaTime) {
     statusMessage = "りっか通常モード";
     statusMessageTimer = 1.2;
     player.vx *= 0.35;
+    soundManager.returnToStageBgm();
   }
 
   updateHud();
@@ -1804,9 +2172,57 @@ function drawFloatingTexts() {
   }
 }
 
+function handleGamepadInput() {
+  input.soundTogglePressed = false;
+  input.menuUpPressed = false;
+  input.menuDownPressed = false;
+  input.menuSelectPressed = false;
+  input.menuBackPressed = false;
+
+  if (!gamepadManager?.connected) {
+    return;
+  }
+
+  if (gameState === GAME_STATE.PLAYING) {
+    if (gamepadManager.isPressed("A")) {
+      input.jumpPressed = true;
+    }
+    if (gamepadManager.isPressed("B")) {
+      input.switchPressed = true;
+    }
+    if (gamepadManager.isPressed("SELECT")) {
+      input.soundTogglePressed = true;
+      soundManager.resume();
+      soundManager.toggleMuted();
+    }
+    return;
+  }
+
+  if (gamepadManager.isPressed("DPAD_UP")) {
+    input.menuUpPressed = true;
+    menuManager.move(-1);
+  }
+  if (gamepadManager.isPressed("DPAD_DOWN") || gamepadManager.isPressed("SELECT")) {
+    input.menuDownPressed = true;
+    menuManager.move(1);
+  }
+  if (gamepadManager.isPressed("A") || gamepadManager.isPressed("START")) {
+    input.menuSelectPressed = true;
+    soundManager.resume();
+    menuManager.select();
+  }
+  if (gamepadManager.isPressed("B")) {
+    input.menuBackPressed = true;
+    menuManager.back();
+  }
+}
+
 function gameLoop(currentTime) {
   const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.033);
   lastTime = currentTime;
+
+  gamepadManager.update();
+  handleGamepadInput();
 
   if (gameState === GAME_STATE.PLAYING) {
     update(deltaTime);
@@ -2042,6 +2458,7 @@ window.addEventListener("keydown", (event) => {
     input.switchPressed = true;
   }
   if (event.code === "KeyM" && !event.repeat) {
+    soundManager.resume();
     soundManager.toggleMuted();
   }
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyC", "KeyM", "Tab"].includes(event.code)) {
@@ -2061,9 +2478,24 @@ window.addEventListener("keyup", (event) => {
   }
 });
 
+window.addEventListener("gamepadconnected", () => {
+  gamepadManager.update();
+  updateGamepadHud();
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+  gamepadManager.update();
+  updateGamepadHud();
+});
+
 window.addEventListener("contextmenu", (event) => event.preventDefault());
 
 startButton.addEventListener("click", startGame);
+titleSoundButton.addEventListener("click", () => {
+  soundManager.resume();
+  soundManager.toggleMuted();
+  menuManager.updateSelection();
+});
 restartButton.addEventListener("click", startGame);
 continueButton.addEventListener("click", continueCurrentStage);
 nextStageButton.addEventListener("click", goToNextStage);

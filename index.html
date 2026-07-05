@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>むぎとりっかの横スクロールアクション Ver.0.7.1</title>
+  <title>むぎとりっかの横スクロールアクション Ver.0.9</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,9 +13,11 @@
       <p class="lead">おやつを集めながら、穴と障害物をジャンプで越えよう。</p>
       <p class="final-score">High Score: <strong id="titleHighScoreText">0</strong></p>
       <button id="startButton" class="menu-button" type="button">START</button>
+      <button id="titleSoundButton" class="menu-button secondary" type="button">SOUND ON</button>
       <div class="help">
         <p>PC: ← → で移動 / Space または ↑ でジャンプ</p>
         <p>スマホ: 画面下のボタンで操作</p>
+        <p>コントローラ: 接続後にAボタンなどを一度押してください</p>
       </div>
     </section>
 
@@ -29,6 +31,7 @@
         <div class="hud-row secondary">
           <span>Awaken <strong id="awakeningText">0/3</strong></span>
           <span>Sound <strong id="soundText">ON</strong></span>
+          <span>Pad <strong id="padText">OFF</strong></span>
           <span class="switch-help">C / Tab: 交代</span>
         </div>
       </div>
