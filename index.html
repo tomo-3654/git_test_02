@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>りっかの横スクロールアクション Ver.0.5.1</title>
+  <title>むぎとりっかの横スクロールアクション Ver.0.7.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="game-shell">
     <section id="titleScreen" class="screen overlay-screen">
-      <h1>りっかのさんぽ道</h1>
+      <h1>むぎとりっかのさんぽ道</h1>
       <p class="lead">おやつを集めながら、穴と障害物をジャンプで越えよう。</p>
       <p class="final-score">High Score: <strong id="titleHighScoreText">0</strong></p>
       <button id="startButton" class="menu-button" type="button">START</button>
@@ -53,6 +53,7 @@
       <h2>GAME OVER</h2>
       <p class="final-score">Score: <strong id="finalScoreText">0</strong></p>
       <p class="final-score">High Score: <strong id="gameOverHighScoreText">0</strong></p>
+      <button id="continueButton" class="menu-button" type="button">CONTINUE</button>
       <button id="restartButton" class="menu-button" type="button">RESTART</button>
       <button id="gameOverTitleButton" class="menu-button secondary" type="button">TITLE</button>
     </section>
@@ -64,6 +65,16 @@
       <button id="nextStageButton" class="menu-button" type="button">NEXT STAGE</button>
       <button id="clearRestartButton" class="menu-button" type="button">RESTART</button>
       <button id="clearTitleButton" class="menu-button secondary" type="button">TITLE</button>
+    </section>
+
+    <section id="endingScreen" class="screen overlay-screen hidden">
+      <h2>ALL STAGES CLEAR!</h2>
+      <p class="lead">りっかとむぎは、今日もたくさん走りました！</p>
+      <p class="final-score">Final Score: <strong id="endingScoreText">0</strong></p>
+      <p class="final-score">High Score: <strong id="endingHighScoreText">0</strong></p>
+      <p class="lead">おしまい！</p>
+      <button id="endingPlayAgainButton" class="menu-button" type="button">PLAY AGAIN</button>
+      <button id="endingTitleButton" class="menu-button secondary" type="button">TITLE</button>
     </section>
   </main>
 

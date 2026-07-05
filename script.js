@@ -1,6 +1,8 @@
 "use strict";
 
 const DEBUG_HITBOX = false;
+const DEBUG_STAGE = false;
+const RANDOM_SEED = null;
 
 const CANVAS_CONFIG = {
   width: 960,
@@ -11,7 +13,8 @@ const GAME_STATE = {
   TITLE: "title",
   PLAYING: "playing",
   GAME_OVER: "gameOver",
-  STAGE_CLEAR: "stageClear"
+  STAGE_CLEAR: "stageClear",
+  ENDING: "ending"
 };
 
 const STORAGE_KEYS = {
@@ -20,12 +23,24 @@ const STORAGE_KEYS = {
 };
 
 const STAGE_CONFIG = {
+  totalStages: 5,
+  continuePenalty: 20,
+  segmentWidth: 520,
+  groundY: 438,
   snackScore: 10,
   awakeningItemScore: 30,
   fallLimit: 620,
   cameraLeadX: 380,
   goalWidth: 64,
   goalHeight: 128
+};
+
+const STAGE_GENERATION_CONFIGS = {
+  1: { length: 3200, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: 3, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
+  2: { length: 3800, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: 3, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
+  3: { length: 4400, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: 4, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
+  4: { length: 5000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: 4, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
+  5: { length: 5600, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: 4, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
 };
 
 const AWAKENING_CONFIG = {
@@ -48,15 +63,67 @@ const OTHER_DOG_CONFIG = {
   eventDistance: 90,
   cooldown: 3000,
   mugiStunDuration: 800,
+  awakenedPenaltySlowScale: 0.72,
+  normalPenaltySlowScale: 0.55,
   riccaFollowUpDelay: 500,
-  mugiPenalty: 5,
-  riccaComboBonus: 10,
-  awakenedBonus: 10,
-  drawWidth: 58,
-  drawHeight: 44,
   bobAmplitude: 2,
-  fallbackColor: "#f4f0e8",
   reactionDistance: 34
+};
+
+const OTHER_DOG_TYPES = {
+  A: {
+    label: "犬A",
+    description: "濃い茶色の犬",
+    color: "#5a3825",
+    outlineColor: "#352116",
+    width: 58,
+    height: 44,
+    mugiScore: -5,
+    riccaScore: 10,
+    mugiMessage: "犬A：むぎ ガウ！ -5",
+    riccaMessage: "犬A：りっか わん！ +10",
+    imagePaths: ["assets/images/other_dog_a_01.png", "assets/images/other_dog_a_02.png"]
+  },
+  B: {
+    label: "犬B",
+    description: "白っぽい犬",
+    color: "#f3efe2",
+    outlineColor: "#b7aa8a",
+    width: 58,
+    height: 44,
+    mugiScore: 10,
+    riccaScore: -5,
+    mugiMessage: "犬B：むぎ なかよし！ +10",
+    riccaMessage: "犬B：りっか びっくり！ -5",
+    imagePaths: ["assets/images/other_dog_b_01.png", "assets/images/other_dog_b_02.png"]
+  },
+  C: {
+    label: "犬C",
+    description: "グレーの犬",
+    color: "#8f8f8f",
+    outlineColor: "#5e5e5e",
+    width: 58,
+    height: 44,
+    mugiScore: 10,
+    riccaScore: 10,
+    mugiMessage: "犬C：むぎ あそぼ！ +10",
+    riccaMessage: "犬C：りっか わん！ +10",
+    imagePaths: ["assets/images/other_dog_c_01.png", "assets/images/other_dog_c_02.png"]
+  },
+  D: {
+    label: "犬D",
+    description: "大型犬",
+    color: "#8b5a2b",
+    outlineColor: "#4f321c",
+    colorVariants: ["#8b5a2b", "#f2f2e8", "#888888", "#222222"],
+    width: 120,
+    height: 90,
+    mugiScore: -5,
+    riccaScore: -5,
+    mugiMessage: "犬D：むぎ ちょっと警戒… -5",
+    riccaMessage: "犬D：りっか あわわ… -5",
+    imagePaths: ["assets/images/other_dog_d_01.png", "assets/images/other_dog_d_02.png"]
+  }
 };
 
 const FLOATING_TEXT_CONFIG = {
@@ -103,10 +170,7 @@ const CHARACTER_CONFIGS = {
 
 const CHARACTER_ORDER = ["ricca", "mugi"];
 const START_POSITION = { x: 80, y: 360 };
-const OTHER_DOG_IMAGE_PATHS = [
-  "assets/images/dog_friend_01.png",
-  "assets/images/dog_friend_02.png"
-];
+let randomState = RANDOM_SEED;
 
 const LEVELS = [
   {
@@ -150,8 +214,10 @@ const LEVELS = [
       { type: "treat", x: 3000, y: 116 }
     ],
     otherDogs: [
-      { x: 1180, groundY: 438 },
-      { x: 2320, groundY: 438 }
+      { type: "A", x: 1180, groundY: 438 },
+      { type: "B", x: 1720, groundY: 438 },
+      { type: "C", x: 2320, groundY: 438 },
+      { type: "D", x: 2940, groundY: 438, colorVariant: "#222222" }
     ]
   },
   {
@@ -196,9 +262,10 @@ const LEVELS = [
       { type: "treat", x: 3290, y: 385 }
     ],
     otherDogs: [
-      { x: 1340, groundY: 438 },
-      { x: 2380, groundY: 438 },
-      { x: 3050, groundY: 250 }
+      { type: "A", x: 1340, groundY: 438 },
+      { type: "B", x: 1880, groundY: 438 },
+      { type: "C", x: 2380, groundY: 438 },
+      { type: "D", x: 3050, groundY: 250, colorVariant: "#888888" }
     ]
   }
 ];
@@ -209,12 +276,16 @@ const titleScreen = document.getElementById("titleScreen");
 const gameScreen = document.getElementById("gameScreen");
 const gameOverScreen = document.getElementById("gameOverScreen");
 const stageClearScreen = document.getElementById("stageClearScreen");
+const endingScreen = document.getElementById("endingScreen");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restartButton");
+const continueButton = document.getElementById("continueButton");
 const nextStageButton = document.getElementById("nextStageButton");
 const clearRestartButton = document.getElementById("clearRestartButton");
 const clearTitleButton = document.getElementById("clearTitleButton");
 const gameOverTitleButton = document.getElementById("gameOverTitleButton");
+const endingPlayAgainButton = document.getElementById("endingPlayAgainButton");
+const endingTitleButton = document.getElementById("endingTitleButton");
 const muteButton = document.getElementById("muteButton");
 const stageText = document.getElementById("stageText");
 const scoreText = document.getElementById("scoreText");
@@ -228,6 +299,8 @@ const gameOverHighScoreText = document.getElementById("gameOverHighScoreText");
 const clearTitle = document.getElementById("clearTitle");
 const clearScoreText = document.getElementById("clearScoreText");
 const clearHighScoreText = document.getElementById("clearHighScoreText");
+const endingScoreText = document.getElementById("endingScoreText");
+const endingHighScoreText = document.getElementById("endingHighScoreText");
 
 const input = {
   left: false,
@@ -241,6 +314,7 @@ let characterImages = {};
 let activeCharacterId = "ricca";
 let player;
 let items = [];
+let obstacles = [];
 let otherDogs = [];
 let otherDogImages = [];
 let score = 0;
@@ -249,6 +323,7 @@ let cameraX = 0;
 let gameState = GAME_STATE.TITLE;
 let lastTime = 0;
 let currentLevelIndex = 0;
+let currentLevel = null;
 let switchEffectTime = 0;
 let awakeningItemCount = 0;
 let isAwakened = false;
@@ -378,20 +453,21 @@ class Player {
     const config = this.config;
     const hitbox = this.getHitbox();
     const drawScale = this.characterId === "ricca" && isAwakened ? AWAKENING_CONFIG.auraScale : 1;
-    const drawWidth = config.drawWidth * drawScale;
-    const drawHeight = config.drawHeight * drawScale;
-    const drawX = this.x - currentCameraX - (drawWidth - config.hitboxWidth) / 2;
-    const drawY = this.y - (drawHeight - config.hitboxHeight) + 8;
     const image = this.images[this.animationFrame];
 
     if (image && image.loaded) {
+      const drawSize = getImageDrawSize(image.element, config.drawHeight * drawScale, config.drawWidth * drawScale);
+      const footY = hitbox.y + hitbox.height + 8;
+      const drawX = hitbox.x - currentCameraX + hitbox.width / 2 - drawSize.width / 2;
+      const drawY = footY - drawSize.height;
+
       context.save();
       if (this.facing === "left") {
-        context.translate(drawX + drawWidth, drawY);
+        context.translate(drawX + drawSize.width, drawY);
         context.scale(-1, 1);
-        context.drawImage(image.element, 0, 0, drawWidth, drawHeight);
+        context.drawImage(image.element, 0, 0, drawSize.width, drawSize.height);
       } else {
-        context.drawImage(image.element, drawX, drawY, drawWidth, drawHeight);
+        context.drawImage(image.element, drawX, drawY, drawSize.width, drawSize.height);
       }
       context.restore();
     } else {
@@ -407,11 +483,14 @@ class Player {
 
   drawFallback(context, currentCameraX) {
     const hitbox = this.getHitbox();
-    const x = hitbox.x - currentCameraX;
+    const width = this.config.hitboxWidth;
+    const height = this.config.hitboxHeight;
+    const x = hitbox.x - currentCameraX + hitbox.width / 2 - width / 2;
+    const y = hitbox.y + hitbox.height - height;
     context.fillStyle = this.config.fallbackColor;
-    context.fillRect(x, hitbox.y, hitbox.width, hitbox.height);
+    context.fillRect(x, y, width, height);
     context.fillStyle = "#f8f5ef";
-    context.fillRect(x + (this.facing === "right" ? 42 : 10), hitbox.y + 10, 8, 8);
+    context.fillRect(x + (this.facing === "right" ? width - 16 : 8), y + 10, 8, 8);
   }
 
   jump() {
@@ -445,6 +524,11 @@ class OtherDog {
   constructor(config, index) {
     this.x = config.x;
     this.groundY = config.groundY ?? config.y;
+    this.type = config.type ?? "A";
+    this.config = OTHER_DOG_TYPES[this.type] ?? OTHER_DOG_TYPES.A;
+    this.width = this.config.width;
+    this.height = this.config.height;
+    this.color = config.colorVariant || this.config.color;
     this.index = index;
     this.cooldownTimer = 0;
     this.reactionTimer = 0;
@@ -466,12 +550,12 @@ class OtherDog {
   draw(context, currentCameraX, images) {
     const x = this.getDrawX() - currentCameraX;
     const bobOffset = Math.sin(this.animTime * 0.005 + this.index) * OTHER_DOG_CONFIG.bobAmplitude;
-    const y = this.groundY - OTHER_DOG_CONFIG.drawHeight + bobOffset;
+    const y = this.groundY - this.height + bobOffset;
     const frame = Math.floor(performance.now() / 240) % 2;
-    const image = images[frame];
+    const image = images[this.type]?.[frame];
 
     if (image && image.loaded) {
-      context.drawImage(image.element, x, y, OTHER_DOG_CONFIG.drawWidth, OTHER_DOG_CONFIG.drawHeight);
+      context.drawImage(image.element, x, y, this.width, this.height);
     } else {
       this.drawFallback(context, x, y);
     }
@@ -486,21 +570,33 @@ class OtherDog {
 
   drawFallback(context, x, y) {
     context.save();
-    context.fillStyle = OTHER_DOG_CONFIG.fallbackColor;
+    context.fillStyle = this.color;
+    context.strokeStyle = this.config.outlineColor;
+    context.lineWidth = 3;
     context.beginPath();
-    context.ellipse(x + 28, y + 24, 28, 20, 0, 0, Math.PI * 2);
+    context.ellipse(x + this.width * 0.48, y + this.height * 0.55, this.width * 0.48, this.height * 0.34, 0, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = "#7a5b45";
+    context.stroke();
+    context.fillStyle = this.color;
     context.beginPath();
-    context.arc(x + 46, y + 14, 16, 0, Math.PI * 2);
+    context.arc(x + this.width * 0.78, y + this.height * 0.32, this.height * 0.28, 0, Math.PI * 2);
     context.fill();
+    context.stroke();
     context.fillStyle = "#25313d";
     context.beginPath();
-    context.arc(x + 51, y + 11, 3, 0, Math.PI * 2);
+    context.arc(x + this.width * 0.84, y + this.height * 0.28, 3, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = "#d8aa68";
-    context.fillRect(x + 8, y + 38, 8, 12);
-    context.fillRect(x + 38, y + 38, 8, 12);
+    context.fillStyle = this.config.outlineColor;
+    context.fillRect(x + this.width * 0.18, y + this.height * 0.8, this.width * 0.12, this.height * 0.22);
+    context.fillRect(x + this.width * 0.62, y + this.height * 0.8, this.width * 0.12, this.height * 0.22);
+    context.fillStyle = this.type === "B" ? "#25313d" : "#ffffff";
+    context.strokeStyle = "#25313d";
+    context.lineWidth = 2;
+    context.font = `bold ${this.height > 50 ? 22 : 16}px system-ui, sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(this.type, x + this.width * 0.44, y + this.height * 0.53);
+    context.strokeText(this.type, x + this.width * 0.44, y + this.height * 0.53);
     context.restore();
   }
 
@@ -516,8 +612,8 @@ class OtherDog {
 
   getCenter() {
     return {
-      x: this.getDrawX() + OTHER_DOG_CONFIG.drawWidth / 2,
-      y: this.groundY - OTHER_DOG_CONFIG.drawHeight / 2
+      x: this.getDrawX() + this.width / 2,
+      y: this.groundY - this.height / 2
     };
   }
 
@@ -704,6 +800,14 @@ class SoundManager {
     ]);
   }
 
+  playBreak() {
+    this.playToneSequence([
+      { frequency: 240, start: 0, duration: 0.06, type: "square", gain: 0.07 },
+      { frequency: 420, start: 0.05, duration: 0.08, type: "triangle", gain: 0.07 },
+      { frequency: 760, start: 0.12, duration: 0.1, type: "triangle", gain: 0.06 }
+    ]);
+  }
+
   playGameOver() {
     this.playToneSequence([
       { frequency: 260, start: 0, duration: 0.14, type: "triangle", gain: 0.08 },
@@ -817,6 +921,253 @@ function updateSoundHud() {
   muteButton.textContent = soundManager.muted ? "音OFF" : "音ON";
 }
 
+function createRandom() {
+  if (RANDOM_SEED === null) {
+    return Math.random;
+  }
+
+  randomState = randomState ?? RANDOM_SEED;
+  return () => {
+    randomState = (randomState * 1664525 + 1013904223) >>> 0;
+    return randomState / 4294967296;
+  };
+}
+
+function randomBetween(random, min, max) {
+  return min + (max - min) * random();
+}
+
+function randomInt(random, min, max) {
+  return Math.floor(randomBetween(random, min, max + 1));
+}
+
+function chooseRandom(random, values) {
+  return values[Math.floor(random() * values.length)];
+}
+
+function isNearHole(x, holes, padding = 70) {
+  return holes.some((hole) => x > hole.x - padding && x < hole.x + hole.width + padding);
+}
+
+function isFarEnough(x, values, minDistance) {
+  return values.every((value) => Math.abs(value - x) >= minDistance);
+}
+
+function getGroundPlatformSegments(length, holes) {
+  const platforms = [];
+  let startX = 0;
+
+  for (const hole of holes) {
+    if (hole.x > startX) {
+      platforms.push({
+        x: startX,
+        y: STAGE_CONFIG.groundY,
+        width: hole.x - startX,
+        height: 42,
+        type: "ground"
+      });
+    }
+    startX = hole.x + hole.width;
+  }
+
+  if (startX < length) {
+    platforms.push({
+      x: startX,
+      y: STAGE_CONFIG.groundY,
+      width: length - startX,
+      height: 42,
+      type: "ground"
+    });
+  }
+
+  return platforms.filter((platform) => platform.width >= 80);
+}
+
+function getSafeGroundX(random, length, holes, usedX = [], options = {}) {
+  const minX = options.minX ?? 680;
+  const maxX = options.maxX ?? length - 560;
+  const minDistance = options.minDistance ?? 180;
+  const holePadding = options.holePadding ?? 110;
+
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const x = randomBetween(random, minX, maxX);
+    if (!isNearHole(x, holes, holePadding) && isFarEnough(x, usedX, minDistance)) {
+      usedX.push(x);
+      return x;
+    }
+  }
+
+  const fallbackX = Math.min(maxX, Math.max(minX, usedX.length ? usedX[usedX.length - 1] + minDistance : minX));
+  usedX.push(fallbackX);
+  return fallbackX;
+}
+
+function generateStage(stageNumber) {
+  const random = createRandom();
+  const config = STAGE_GENERATION_CONFIGS[stageNumber];
+  const length = config.length;
+  const holes = [];
+  const usedX = [];
+
+  for (let i = 0; i < config.holes; i += 1) {
+    const x = getSafeGroundX(random, length, holes, usedX, {
+      minX: 700,
+      maxX: length - 900,
+      minDistance: 520,
+      holePadding: 190
+    });
+    holes.push({
+      x: Math.round(x),
+      width: randomInt(random, 80, config.maxHoleWidth)
+    });
+  }
+  holes.sort((a, b) => a.x - b.x);
+
+  const platforms = getGroundPlatformSegments(length, holes);
+  const upperPlatforms = [];
+
+  for (let i = 0; i < config.platforms; i += 1) {
+    const isUpper = i % 3 === 2;
+    const y = isUpper ? randomInt(random, 238, 270) : randomInt(random, 310, 346);
+    const width = randomInt(random, 220, 330);
+    const x = getSafeGroundX(random, length, holes, usedX, {
+      minX: 760,
+      maxX: length - 760,
+      minDistance: 260,
+      holePadding: 80
+    });
+    const platform = {
+      x: Math.round(x),
+      y,
+      width,
+      height: isUpper ? 24 : 28,
+      type: isUpper ? "upper" : "middle"
+    };
+    upperPlatforms.push(platform);
+    platforms.push(platform);
+  }
+
+  const obstacles = [];
+  for (let i = 0; i < config.obstacles; i += 1) {
+    const height = randomInt(random, 38, config.maxObstacleHeight);
+    const x = getSafeGroundX(random, length, holes, usedX, {
+      minX: 760,
+      maxX: length - 720,
+      minDistance: 240,
+      holePadding: 140
+    });
+    obstacles.push({
+      x: Math.round(x),
+      y: STAGE_CONFIG.groundY - height,
+      width: randomInt(random, 38, 52),
+      height
+    });
+  }
+
+  const items = [];
+  for (let i = 0; i < config.treats; i += 1) {
+    const platform = upperPlatforms.length && random() < 0.45 ? chooseRandom(random, upperPlatforms) : null;
+    if (platform) {
+      items.push({
+        type: "treat",
+        x: Math.round(platform.x + platform.width * randomBetween(random, 0.25, 0.75)),
+        y: platform.y - 48
+      });
+    } else {
+      const x = getSafeGroundX(random, length, holes, usedX, {
+        minX: 360,
+        maxX: length - 420,
+        minDistance: 120,
+        holePadding: 70
+      });
+      items.push({ type: "treat", x: Math.round(x), y: STAGE_CONFIG.groundY - 52 });
+    }
+  }
+
+  for (let i = 0; i < config.awakeningItems; i += 1) {
+    const platform = upperPlatforms.length && random() < 0.55 ? chooseRandom(random, upperPlatforms) : null;
+    if (platform) {
+      items.push({
+        type: "awakening",
+        x: Math.round(platform.x + platform.width * randomBetween(random, 0.28, 0.72)),
+        y: platform.y - 52
+      });
+    } else {
+      const x = getSafeGroundX(random, length, holes, usedX, {
+        minX: 820,
+        maxX: length - 620,
+        minDistance: 220,
+        holePadding: 90
+      });
+      items.push({ type: "awakening", x: Math.round(x), y: STAGE_CONFIG.groundY - 52 });
+    }
+  }
+
+  const otherDogs = [];
+  const dogTypes = [...config.dogTypes];
+  if (stageNumber >= 3 && !dogTypes.includes("D")) {
+    dogTypes.push("D");
+  }
+
+  for (let i = 0; i < config.dogs; i += 1) {
+    const mustPlaceD = stageNumber >= 3 && i === config.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
+    const type = mustPlaceD ? "D" : chooseRandom(random, dogTypes);
+    const typeConfig = OTHER_DOG_TYPES[type];
+    const canUsePlatform = type !== "D" && upperPlatforms.length && random() < 0.2;
+    const platform = canUsePlatform ? chooseRandom(random, upperPlatforms) : null;
+    const x = platform
+      ? Math.round(platform.x + platform.width / 2 - typeConfig.width / 2)
+      : Math.round(getSafeGroundX(random, length, holes, usedX, {
+        minX: 900,
+        maxX: length - 740,
+        minDistance: type === "D" ? 420 : 260,
+        holePadding: type === "D" ? 190 : 110
+      }));
+
+    otherDogs.push({
+      type,
+      x,
+      groundY: platform ? platform.y : STAGE_CONFIG.groundY,
+      colorVariant: type === "D" ? chooseRandom(random, typeConfig.colorVariants) : undefined
+    });
+  }
+
+  const level = {
+    name: `Stage ${stageNumber} / ${STAGE_CONFIG.totalStages}`,
+    stageNumber,
+    length,
+    goal: {
+      x: length - 220,
+      y: 310,
+      width: STAGE_CONFIG.goalWidth,
+      height: STAGE_CONFIG.goalHeight
+    },
+    platforms,
+    holes,
+    obstacles,
+    items,
+    otherDogs
+  };
+
+  if (DEBUG_STAGE) {
+    console.log("Generated stage", {
+      stageNumber,
+      holes: holes.length,
+      obstacles: obstacles.length,
+      platforms: platforms.length,
+      items: items.length,
+      otherDogs: otherDogs.length,
+      goalX: level.goal.x
+    });
+  }
+
+  return level;
+}
+
+function generateCurrentStage() {
+  currentLevel = generateStage(currentLevelIndex + 1);
+}
+
 soundManager = new SoundManager();
 highScore = readStoredNumber(STORAGE_KEYS.highScore, 0);
 updateTitleHighScore();
@@ -825,6 +1176,8 @@ updateSoundHud();
 function resetGame(options = {}) {
   if (options.resetScore) {
     score = 0;
+  }
+  if (options.resetScore || options.resetAwakening) {
     awakeningItemCount = 0;
     isAwakened = false;
     awakeningTimer = 0;
@@ -838,7 +1191,11 @@ function resetGame(options = {}) {
   input.jumpHeld = false;
   input.jumpPressed = false;
   input.switchPressed = false;
+  if (!currentLevel) {
+    generateCurrentStage();
+  }
   items = getCurrentLevel().items.map((item) => ({ ...item, collected: false }));
+  obstacles = getCurrentLevel().obstacles.map((obstacle) => ({ ...obstacle, destroyed: false }));
   otherDogs = getCurrentLevel().otherDogs.map((otherDog, index) => new OtherDog(otherDog, index));
   cameraX = 0;
   player = new Player(activeCharacterId, characterImages[activeCharacterId]);
@@ -852,11 +1209,14 @@ function resetGame(options = {}) {
 function startGame() {
   soundManager.resume();
   currentLevelIndex = 0;
+  randomState = RANDOM_SEED;
+  generateCurrentStage();
   resetGame({ resetScore: true, characterId: "ricca" });
   gameState = GAME_STATE.PLAYING;
   titleScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
   lastTime = performance.now();
 }
@@ -868,43 +1228,53 @@ function endGame() {
   finalScoreText.textContent = String(score);
   gameOverHighScoreText.textContent = String(highScore);
   gameScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
   gameOverScreen.classList.remove("hidden");
 }
 
 function clearLevel() {
+  if (currentLevelIndex >= STAGE_CONFIG.totalStages - 1) {
+    showEnding();
+    return;
+  }
+
   gameState = GAME_STATE.STAGE_CLEAR;
-  updateHighScore();
   soundManager.playGoal();
   clearScoreText.textContent = String(score);
   clearHighScoreText.textContent = String(highScore);
-  const isLastLevel = currentLevelIndex >= LEVELS.length - 1;
-  clearTitle.textContent = isLastLevel ? "ALL CLEAR" : "STAGE CLEAR";
-  nextStageButton.textContent = isLastLevel ? "RESTART" : "NEXT STAGE";
+  clearTitle.textContent = `STAGE ${currentLevelIndex + 1} / ${STAGE_CONFIG.totalStages} CLEAR`;
+  nextStageButton.textContent = "NEXT STAGE";
   gameScreen.classList.add("hidden");
+  gameOverScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
   stageClearScreen.classList.remove("hidden");
 }
 
 function goToNextStage() {
-  if (currentLevelIndex >= LEVELS.length - 1) {
-    startGame();
+  if (currentLevelIndex >= STAGE_CONFIG.totalStages - 1) {
+    showEnding();
     return;
   }
 
   currentLevelIndex += 1;
-  resetGame({ characterId: activeCharacterId });
+  generateCurrentStage();
+  resetGame({ characterId: activeCharacterId, resetAwakening: true });
   gameState = GAME_STATE.PLAYING;
   stageClearScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
   lastTime = performance.now();
 }
 
-function restartCurrentStage() {
+function continueCurrentStage() {
   soundManager.resume();
-  resetGame({ resetScore: true, characterId: "ricca" });
+  score = Math.max(0, score - STAGE_CONFIG.continuePenalty);
+  generateCurrentStage();
+  resetGame({ characterId: "ricca", resetAwakening: true });
   gameState = GAME_STATE.PLAYING;
   titleScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
   lastTime = performance.now();
 }
@@ -919,8 +1289,22 @@ function showTitleScreen() {
   gameScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
   stageClearScreen.classList.add("hidden");
+  endingScreen.classList.add("hidden");
   titleScreen.classList.remove("hidden");
   updateTitleHighScore();
+}
+
+function showEnding() {
+  gameState = GAME_STATE.ENDING;
+  updateHighScore();
+  soundManager.playGoal();
+  endingScoreText.textContent = String(score);
+  endingHighScoreText.textContent = String(highScore);
+  titleScreen.classList.add("hidden");
+  gameScreen.classList.add("hidden");
+  gameOverScreen.classList.add("hidden");
+  stageClearScreen.classList.add("hidden");
+  endingScreen.classList.remove("hidden");
 }
 
 function update(deltaTime) {
@@ -957,7 +1341,7 @@ function update(deltaTime) {
     return;
   }
 
-  if (isTouchingObstacle() || player.y > STAGE_CONFIG.fallLimit) {
+  if (resolveObstacleCollision() || player.y > STAGE_CONFIG.fallLimit) {
     endGame();
   }
 }
@@ -998,27 +1382,46 @@ function handleOtherDogEvents() {
 }
 
 function triggerOtherDogEvent(otherDog) {
-  if (activeCharacterId === "mugi") {
-    messageManager.add("むぎ：ガウ！", 1.3);
-    mugiStunTimer = OTHER_DOG_CONFIG.mugiStunDuration;
-    addScore(-OTHER_DOG_CONFIG.mugiPenalty, "-5", player.x, player.y - 10);
-    soundManager.playGau();
-    otherDog.triggerReaction("mugi");
-  } else if (isAwakened) {
-    messageManager.add("りっか覚醒中：ビューン！", 1.3);
-    addScore(OTHER_DOG_CONFIG.awakenedBonus, "+10", player.x, player.y - 10);
-    soundManager.playCombo();
-    otherDog.triggerReaction("awakened");
-  } else {
-    messageManager.add("りっか：わん！", 1.3);
-    messageManager.add("むぎ：ガウ！", 1.3, OTHER_DOG_CONFIG.riccaFollowUpDelay / 1000);
-    addScore(OTHER_DOG_CONFIG.riccaComboBonus, "+10 Combo!", player.x, player.y - 10);
-    soundManager.playCombo();
-    soundManager.playGau();
-    otherDog.triggerReaction("ricca");
+  const dogConfig = otherDog.config;
+  const awakenedRicca = activeCharacterId === "ricca" && isAwakened;
+  const scoreChange = getOtherDogScoreDelta(activeCharacterId, awakenedRicca, dogConfig);
+  const scoreLabel = scoreChange > 0 ? `+${scoreChange}` : String(scoreChange);
+  const message = activeCharacterId === "mugi" ? dogConfig.mugiMessage : dogConfig.riccaMessage;
+  const displayMessage = awakenedRicca ? `覚醒中 ${message.replace(/[+-]\d+$/, scoreLabel)}` : message;
+
+  messageManager.add(displayMessage, 1.3);
+  if (activeCharacterId === "ricca" && !awakenedRicca && scoreChange > 0) {
+    messageManager.add("むぎも反応した！", 1.3, OTHER_DOG_CONFIG.riccaFollowUpDelay / 1000);
   }
 
+  addScore(scoreChange, scoreLabel, player.x, player.y - 10);
+  applyOtherDogReaction(scoreChange, activeCharacterId, awakenedRicca);
+  soundManager[scoreChange >= 0 ? "playCombo" : "playGau"]();
+  otherDog.triggerReaction(awakenedRicca ? "awakened" : activeCharacterId);
   updateHud();
+}
+
+function getOtherDogScoreDelta(characterId, awakenedRicca, dogConfig) {
+  if (characterId === "mugi") {
+    return dogConfig.mugiScore;
+  }
+
+  const baseScore = dogConfig.riccaScore;
+  return awakenedRicca ? baseScore * 2 : baseScore;
+}
+
+function applyOtherDogReaction(scoreChange, characterId, awakenedRicca) {
+  if (scoreChange >= 0) {
+    return;
+  }
+
+  if (characterId === "mugi") {
+    mugiStunTimer = OTHER_DOG_CONFIG.mugiStunDuration;
+    return;
+  }
+
+  const slowScale = awakenedRicca ? OTHER_DOG_CONFIG.awakenedPenaltySlowScale : OTHER_DOG_CONFIG.normalPenaltySlowScale;
+  player.vx *= slowScale;
 }
 
 function switchCharacter() {
@@ -1122,9 +1525,25 @@ function updateAwakening(deltaTime) {
   updateHud();
 }
 
-function isTouchingObstacle() {
+function resolveObstacleCollision() {
   const hitbox = player.getHitbox();
-  return getCurrentLevel().obstacles.some((obstacle) => rectanglesOverlap(hitbox, obstacle));
+  for (const obstacle of obstacles) {
+    if (obstacle.destroyed || !rectanglesOverlap(hitbox, obstacle)) {
+      continue;
+    }
+
+    if (activeCharacterId === "ricca" && isAwakened) {
+      obstacle.destroyed = true;
+      addScore(10, "+10", obstacle.x + obstacle.width / 2, obstacle.y - 12);
+      messageManager.add("BREAK! +10", 1.2);
+      soundManager.playBreak();
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 function isTouchingGoal() {
@@ -1195,7 +1614,11 @@ function drawPlatforms() {
 }
 
 function drawObstacles() {
-  for (const obstacle of getCurrentLevel().obstacles) {
+  for (const obstacle of obstacles) {
+    if (obstacle.destroyed) {
+      continue;
+    }
+
     const x = obstacle.x - cameraX;
     ctx.fillStyle = "#8e6b4d";
     ctx.fillRect(x, obstacle.y, obstacle.width, obstacle.height);
@@ -1415,7 +1838,10 @@ function updateHud() {
 }
 
 function getCurrentLevel() {
-  return LEVELS[currentLevelIndex];
+  if (!currentLevel) {
+    generateCurrentStage();
+  }
+  return currentLevel;
 }
 
 function rectanglesOverlap(a, b) {
@@ -1434,6 +1860,24 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function getImageDrawSize(imageElement, targetHeight, fallbackWidth) {
+  const sourceWidth = imageElement?.naturalWidth || imageElement?.width || 0;
+  const sourceHeight = imageElement?.naturalHeight || imageElement?.height || 0;
+
+  if (!imageElement || sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      width: fallbackWidth,
+      height: targetHeight
+    };
+  }
+
+  const aspectRatio = sourceWidth / sourceHeight;
+  return {
+    width: targetHeight * aspectRatio,
+    height: targetHeight
+  };
+}
+
 function loadCharacterImages() {
   const entries = Object.entries(CHARACTER_CONFIGS).map(([characterId, config]) => {
     return Promise.all(config.runImages.map(loadSpriteImage)).then((images) => [characterId, images]);
@@ -1443,7 +1887,11 @@ function loadCharacterImages() {
 }
 
 function loadOtherDogImages() {
-  return Promise.all(OTHER_DOG_IMAGE_PATHS.map(loadSpriteImage));
+  const entries = Object.entries(OTHER_DOG_TYPES).map(([type, config]) => {
+    return Promise.all(config.imagePaths.map(loadSpriteImage)).then((images) => [type, images]);
+  });
+
+  return Promise.all(entries).then((loadedEntries) => Object.fromEntries(loadedEntries));
 }
 
 function loadSpriteImage(src) {
@@ -1616,11 +2064,14 @@ window.addEventListener("keyup", (event) => {
 window.addEventListener("contextmenu", (event) => event.preventDefault());
 
 startButton.addEventListener("click", startGame);
-restartButton.addEventListener("click", restartCurrentStage);
+restartButton.addEventListener("click", startGame);
+continueButton.addEventListener("click", continueCurrentStage);
 nextStageButton.addEventListener("click", goToNextStage);
-clearRestartButton.addEventListener("click", restartCurrentStage);
+clearRestartButton.addEventListener("click", startGame);
 clearTitleButton.addEventListener("click", showTitleScreen);
 gameOverTitleButton.addEventListener("click", showTitleScreen);
+endingPlayAgainButton.addEventListener("click", startGame);
+endingTitleButton.addEventListener("click", showTitleScreen);
 muteButton.addEventListener("click", () => {
   soundManager.resume();
   soundManager.toggleMuted();
@@ -1635,6 +2086,7 @@ setTapButton(document.getElementById("switchButton"), () => {
 Promise.all([loadCharacterImages(), loadOtherDogImages()]).then(([images, loadedOtherDogImages]) => {
   characterImages = images;
   otherDogImages = loadedOtherDogImages;
+  generateCurrentStage();
   resetGame({ resetScore: true, characterId: "ricca" });
   draw();
   requestAnimationFrame((time) => {
