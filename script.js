@@ -3,6 +3,7 @@
 const DEBUG_HITBOX = false;
 const DEBUG_STAGE = false;
 const DEBUG_GAMEPAD = false;
+const DEBUG_DOG_LOGIC = false;
 const RANDOM_SEED = null;
 
 const CANVAS_CONFIG = {
@@ -104,56 +105,68 @@ const OTHER_DOG_CONFIG = {
 
 const OTHER_DOG_TYPES = {
   A: {
+    id: "A",
     label: "犬A",
-    description: "濃い茶色の犬",
+    description: "濃い茶色",
     color: "#5a3825",
     outlineColor: "#352116",
     width: 58,
     height: 44,
-    mugiScore: -5,
-    riccaScore: 10,
-    mugiMessage: "犬A：むぎ ガウ！ -5",
-    riccaMessage: "犬A：りっか わん！ +10",
+    scores: { mugi: -5, ricca: 10 },
+    messages: {
+      mugi: "犬A：むぎ ガウ！ -5",
+      ricca: "犬A：りっか わん！ +10",
+      riccaAwakenedPositive: "犬A：覚醒りっか！ +20"
+    },
     imagePaths: ["assets/images/other_dog_a_01.png", "assets/images/other_dog_a_02.png"]
   },
   B: {
+    id: "B",
     label: "犬B",
-    description: "白っぽい犬",
+    description: "白っぽい",
     color: "#f3efe2",
     outlineColor: "#b7aa8a",
     width: 58,
     height: 44,
-    mugiScore: 10,
-    riccaScore: -5,
-    mugiMessage: "犬B：むぎ なかよし！ +10",
-    riccaMessage: "犬B：りっか びっくり！ -5",
+    scores: { mugi: 10, ricca: -5 },
+    messages: {
+      mugi: "犬B：むぎ なかよし！ +10",
+      ricca: "犬B：りっか びっくり！ -5",
+      riccaAwakenedNegative: "犬B：覚醒りっか 勢い余った！ -10"
+    },
     imagePaths: ["assets/images/other_dog_b_01.png", "assets/images/other_dog_b_02.png"]
   },
   C: {
+    id: "C",
     label: "犬C",
-    description: "グレーの犬",
+    description: "グレー",
     color: "#8f8f8f",
     outlineColor: "#5e5e5e",
     width: 58,
     height: 44,
-    mugiScore: 10,
-    riccaScore: 10,
-    mugiMessage: "犬C：むぎ あそぼ！ +10",
-    riccaMessage: "犬C：りっか わん！ +10",
+    scores: { mugi: 10, ricca: 10 },
+    messages: {
+      mugi: "犬C：むぎ あそぼ！ +10",
+      ricca: "犬C：りっか わん！ +10",
+      riccaAwakenedPositive: "犬C：覚醒りっか！ +20"
+    },
     imagePaths: ["assets/images/other_dog_c_01.png", "assets/images/other_dog_c_02.png"]
   },
   D: {
+    id: "D",
     label: "犬D",
     description: "大型犬",
     color: "#8b5a2b",
     outlineColor: "#4f321c",
     colorVariants: ["#8b5a2b", "#f2f2e8", "#888888", "#222222"],
-    width: 120,
-    height: 90,
-    mugiScore: -5,
-    riccaScore: -5,
-    mugiMessage: "犬D：むぎ ちょっと警戒… -5",
-    riccaMessage: "犬D：りっか あわわ… -5",
+    width: 130,
+    height: 100,
+    scores: { mugi: -5, ricca: -5 },
+    messages: {
+      mugi: "犬D：むぎ ちょっと警戒… -5",
+      ricca: "犬D：りっか あわわ… -5",
+      riccaAwakenedNegative: "犬D：覚醒りっか 勢い余った！ -10"
+    },
     imagePaths: ["assets/images/other_dog_d_01.png", "assets/images/other_dog_d_02.png"]
   }
 };
@@ -565,8 +578,8 @@ class OtherDog {
   constructor(config, index) {
     this.x = config.x;
     this.groundY = config.groundY ?? config.y;
-    this.type = config.type ?? "A";
-    this.config = OTHER_DOG_TYPES[this.type] ?? OTHER_DOG_TYPES.A;
+    this.type = normalizeOtherDogType(config.type);
+    this.config = OTHER_DOG_TYPES[this.type];
     this.width = this.config.width;
     this.height = this.config.height;
     this.color = config.colorVariant || this.config.color;
@@ -636,8 +649,8 @@ class OtherDog {
     context.font = `bold ${this.height > 50 ? 22 : 16}px system-ui, sans-serif`;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText(this.type, x + this.width * 0.44, y + this.height * 0.53);
-    context.strokeText(this.type, x + this.width * 0.44, y + this.height * 0.53);
+    context.fillText(this.config.id, x + this.width * 0.44, y + this.height * 0.53);
+    context.strokeText(this.config.id, x + this.width * 0.44, y + this.height * 0.53);
     context.restore();
   }
 
@@ -1450,7 +1463,7 @@ function generateStage(stageNumber) {
 
   for (let i = 0; i < config.dogs; i += 1) {
     const mustPlaceD = stageNumber >= 3 && i === config.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
-    const type = mustPlaceD ? "D" : chooseRandom(random, dogTypes);
+    const type = normalizeOtherDogType(mustPlaceD ? "D" : chooseRandom(random, dogTypes));
     const typeConfig = OTHER_DOG_TYPES[type];
     const canUsePlatform = type !== "D" && upperPlatforms.length && random() < 0.2;
     const platform = canUsePlatform ? chooseRandom(random, upperPlatforms) : null;
@@ -1514,6 +1527,7 @@ highScore = readStoredNumber(STORAGE_KEYS.highScore, 0);
 updateTitleHighScore();
 updateSoundHud();
 updateGamepadHud();
+debugPrintDogScoreTable();
 menuManager.updateSelection();
 
 function resetGame(options = {}) {
@@ -1744,16 +1758,19 @@ function handleOtherDogEvents() {
     }
 
     triggerOtherDogEvent(otherDog);
+    break;
   }
 }
 
 function triggerOtherDogEvent(otherDog) {
-  const dogConfig = otherDog.config;
+  if (!otherDog.canTrigger()) {
+    return;
+  }
+
   const awakenedRicca = activeCharacterId === "ricca" && isAwakened;
-  const scoreChange = getOtherDogScoreDelta(activeCharacterId, awakenedRicca, dogConfig);
+  const scoreChange = getOtherDogScoreDelta(activeCharacterId, awakenedRicca, otherDog.type);
   const scoreLabel = scoreChange > 0 ? `+${scoreChange}` : String(scoreChange);
-  const message = activeCharacterId === "mugi" ? dogConfig.mugiMessage : dogConfig.riccaMessage;
-  const displayMessage = awakenedRicca ? `覚醒中 ${message.replace(/[+-]\d+$/, scoreLabel)}` : message;
+  const displayMessage = getOtherDogMessage(activeCharacterId, awakenedRicca, otherDog.type, scoreChange);
 
   messageManager.add(displayMessage, 1.3);
   if (activeCharacterId === "ricca" && !awakenedRicca && scoreChange > 0) {
@@ -1761,33 +1778,64 @@ function triggerOtherDogEvent(otherDog) {
   }
 
   addScore(scoreChange, scoreLabel, player.x, player.y - 10);
-  applyOtherDogReaction(scoreChange, activeCharacterId, awakenedRicca);
+  applyOtherDogReaction(scoreChange, awakenedRicca);
   soundManager[scoreChange >= 0 ? "playCombo" : "playGau"]();
   otherDog.triggerReaction(awakenedRicca ? "awakened" : activeCharacterId);
   updateHud();
 }
 
-function getOtherDogScoreDelta(characterId, awakenedRicca, dogConfig) {
-  if (characterId === "mugi") {
-    return dogConfig.mugiScore;
+function normalizeOtherDogType(type) {
+  if (Object.prototype.hasOwnProperty.call(OTHER_DOG_TYPES, type)) {
+    return type;
   }
-
-  const baseScore = dogConfig.riccaScore;
-  return awakenedRicca ? baseScore * 2 : baseScore;
+  if (DEBUG_DOG_LOGIC) {
+    console.warn("Unknown other dog type. Falling back to A.", type);
+  }
+  return "A";
 }
 
-function applyOtherDogReaction(scoreChange, characterId, awakenedRicca) {
-  if (scoreChange >= 0) {
-    return;
+function getOtherDogScoreDelta(characterId, awakenedRicca, otherDogType) {
+  const dogConfig = OTHER_DOG_TYPES[normalizeOtherDogType(otherDogType)];
+  if (characterId === "mugi") {
+    return dogConfig.scores.mugi;
   }
 
+  const baseScore = dogConfig.scores.ricca;
+  return characterId === "ricca" && awakenedRicca ? baseScore * 2 : baseScore;
+}
+
+function getOtherDogMessage(characterId, awakenedRicca, otherDogType, scoreChange) {
+  const dogConfig = OTHER_DOG_TYPES[normalizeOtherDogType(otherDogType)];
   if (characterId === "mugi") {
-    mugiStunTimer = OTHER_DOG_CONFIG.mugiStunDuration;
+    return dogConfig.messages.mugi;
+  }
+  if (awakenedRicca) {
+    const key = scoreChange >= 0 ? "riccaAwakenedPositive" : "riccaAwakenedNegative";
+    return dogConfig.messages[key] ?? `覚醒中 ${dogConfig.messages.ricca.replace(/[+-]\d+$/, scoreChange > 0 ? `+${scoreChange}` : String(scoreChange))}`;
+  }
+  return dogConfig.messages.ricca;
+}
+
+function applyOtherDogReaction(scoreChange, awakenedRicca) {
+  if (scoreChange >= 0) {
     return;
   }
 
   const slowScale = awakenedRicca ? OTHER_DOG_CONFIG.awakenedPenaltySlowScale : OTHER_DOG_CONFIG.normalPenaltySlowScale;
   player.vx *= slowScale;
+}
+
+function debugPrintDogScoreTable() {
+  if (!DEBUG_DOG_LOGIC) {
+    return;
+  }
+  for (const type of ["A", "B", "C", "D"]) {
+    console.log(type, {
+      mugi: getOtherDogScoreDelta("mugi", false, type),
+      ricca: getOtherDogScoreDelta("ricca", false, type),
+      riccaAwakened: getOtherDogScoreDelta("ricca", true, type)
+    });
+  }
 }
 
 function switchCharacter() {
