@@ -3,22 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>むぎとりっかの横スクロールアクション Ver.0.9</title>
+  <title>むぎとりっかの横スクロールアクション Ver.0.9.2</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="game-shell">
     <section id="titleScreen" class="screen overlay-screen">
       <h1>むぎとりっかのさんぽ道</h1>
-      <p class="lead">おやつを集めながら、穴と障害物をジャンプで越えよう。</p>
+      <p class="lead">りっかとむぎを切り替えながら進む横スクロールアクションゲームです。</p>
+      <div class="title-rules" aria-label="ゲーム説明と犬タイプ相性">
+        <section class="rule-card">
+          <h2>あそびかた</h2>
+          <p>おやつを集めてスコアアップ！穴に落ちたり、通常時に障害物にぶつかるとアウトです。</p>
+        </section>
+        <section class="rule-card affinity-card">
+          <h2>犬タイプ相性</h2>
+          <div class="affinity-grid" role="table" aria-label="犬タイプ別スコア表">
+            <div class="affinity-row header" role="row"><span>タイプ</span><span>むぎ</span><span>りっか</span></div>
+            <div class="affinity-row" role="row"><span>犬A（濃い茶色）</span><strong class="bad">-5</strong><strong class="good">+10</strong></div>
+            <div class="affinity-row" role="row"><span>犬B（白っぽい）</span><strong class="good">+10</strong><strong class="bad">-5</strong></div>
+            <div class="affinity-row" role="row"><span>犬C（グレー）</span><strong class="good">+10</strong><strong class="good">+10</strong></div>
+            <div class="affinity-row" role="row"><span>犬D（大型犬）</span><strong class="bad">-5</strong><strong class="bad">-5</strong></div>
+          </div>
+          <p class="small-note">むぎが得意：犬B・犬C / 苦手：犬A・犬D</p>
+          <p class="small-note">りっかが得意：犬A・犬C / 苦手：犬B・犬D</p>
+        </section>
+        <section class="rule-card">
+          <h2>りっかトランス</h2>
+          <p>覚醒アイテムを3つ集めると、りっかがトランス！速く、高くジャンプできます。</p>
+          <p>トランス中は障害物を破壊して +10点！他の犬との相性スコアは2倍になります。</p>
+          <p>ただし、穴に落ちるとトランス中でもアウトです。</p>
+        </section>
+        <section class="rule-card controls-card">
+          <h2>操作</h2>
+          <p>PC：← → で移動 / Space または ↑ でジャンプ / C または Tab で交代 / Mで音ON/OFF</p>
+          <p>スマホ：画面下のボタンで操作</p>
+          <p>コントローラ：D-pad左右で移動 / Aでジャンプ / Bで交代 / Selectで音ON/OFF</p>
+        </section>
+      </div>
       <p class="final-score">High Score: <strong id="titleHighScoreText">0</strong></p>
       <button id="startButton" class="menu-button" type="button">START</button>
       <button id="titleSoundButton" class="menu-button secondary" type="button">SOUND ON</button>
-      <div class="help">
-        <p>PC: ← → で移動 / Space または ↑ でジャンプ</p>
-        <p>スマホ: 画面下のボタンで操作</p>
-        <p>コントローラ: 接続後にAボタンなどを一度押してください</p>
-      </div>
     </section>
 
     <section id="gameScreen" class="screen game-screen hidden">

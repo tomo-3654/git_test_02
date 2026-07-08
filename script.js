@@ -3,6 +3,7 @@
 const DEBUG_HITBOX = false;
 const DEBUG_STAGE = false;
 const DEBUG_GAMEPAD = false;
+const DEBUG_DOG_LOGIC = false;
 const RANDOM_SEED = null;
 
 const CANVAS_CONFIG = {
@@ -68,11 +69,11 @@ const STAGE_CONFIG = {
 };
 
 const STAGE_GENERATION_CONFIGS = {
-  1: { length: 3200, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: 3, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
-  2: { length: 3800, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: 3, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
-  3: { length: 4400, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: 4, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
-  4: { length: 5000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: 4, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
-  5: { length: 5600, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: 4, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
+  1: { length: 6400, holesPerSegment: 0.34, obstaclesPerSegment: 0.5, platformsPerSegment: 0.67, treatsPerSegment: 1.34, awakeningItems: 1, dogsPerSegment: 0.34, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
+  2: { length: 7600, holesPerSegment: 0.41, obstaclesPerSegment: 0.55, platformsPerSegment: 0.68, treatsPerSegment: 1.37, awakeningItems: 2, dogsPerSegment: 0.41, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
+  3: { length: 8800, holesPerSegment: 0.35, obstaclesPerSegment: 0.59, platformsPerSegment: 0.71, treatsPerSegment: 1.3, awakeningItems: 2, dogsPerSegment: 0.47, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
+  4: { length: 10000, holesPerSegment: 0.42, obstaclesPerSegment: 0.63, platformsPerSegment: 0.73, treatsPerSegment: 1.25, awakeningItems: 2, dogsPerSegment: 0.52, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
+  5: { length: 11200, holesPerSegment: 0.47, obstaclesPerSegment: 0.65, platformsPerSegment: 0.74, treatsPerSegment: 1.3, awakeningItems: 2, dogsPerSegment: 0.56, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
 };
 
 const AWAKENING_CONFIG = {
@@ -104,56 +105,68 @@ const OTHER_DOG_CONFIG = {
 
 const OTHER_DOG_TYPES = {
   A: {
+    id: "A",
     label: "犬A",
-    description: "濃い茶色の犬",
+    description: "濃い茶色",
     color: "#5a3825",
     outlineColor: "#352116",
     width: 58,
     height: 44,
-    mugiScore: -5,
-    riccaScore: 10,
-    mugiMessage: "犬A：むぎ ガウ！ -5",
-    riccaMessage: "犬A：りっか わん！ +10",
+    scores: { mugi: -5, ricca: 10 },
+    messages: {
+      mugi: "犬A：むぎ ガウ！ -5",
+      ricca: "犬A：りっか わん！ +10",
+      riccaAwakenedPositive: "犬A：覚醒りっか！ +20"
+    },
     imagePaths: ["assets/images/other_dog_a_01.png", "assets/images/other_dog_a_02.png"]
   },
   B: {
+    id: "B",
     label: "犬B",
-    description: "白っぽい犬",
+    description: "白っぽい",
     color: "#f3efe2",
     outlineColor: "#b7aa8a",
     width: 58,
     height: 44,
-    mugiScore: 10,
-    riccaScore: -5,
-    mugiMessage: "犬B：むぎ なかよし！ +10",
-    riccaMessage: "犬B：りっか びっくり！ -5",
+    scores: { mugi: 10, ricca: -5 },
+    messages: {
+      mugi: "犬B：むぎ なかよし！ +10",
+      ricca: "犬B：りっか びっくり！ -5",
+      riccaAwakenedNegative: "犬B：覚醒りっか 勢い余った！ -10"
+    },
     imagePaths: ["assets/images/other_dog_b_01.png", "assets/images/other_dog_b_02.png"]
   },
   C: {
+    id: "C",
     label: "犬C",
-    description: "グレーの犬",
+    description: "グレー",
     color: "#8f8f8f",
     outlineColor: "#5e5e5e",
     width: 58,
     height: 44,
-    mugiScore: 10,
-    riccaScore: 10,
-    mugiMessage: "犬C：むぎ あそぼ！ +10",
-    riccaMessage: "犬C：りっか わん！ +10",
+    scores: { mugi: 10, ricca: 10 },
+    messages: {
+      mugi: "犬C：むぎ あそぼ！ +10",
+      ricca: "犬C：りっか わん！ +10",
+      riccaAwakenedPositive: "犬C：覚醒りっか！ +20"
+    },
     imagePaths: ["assets/images/other_dog_c_01.png", "assets/images/other_dog_c_02.png"]
   },
   D: {
+    id: "D",
     label: "犬D",
     description: "大型犬",
     color: "#8b5a2b",
     outlineColor: "#4f321c",
     colorVariants: ["#8b5a2b", "#f2f2e8", "#888888", "#222222"],
-    width: 120,
-    height: 90,
-    mugiScore: -5,
-    riccaScore: -5,
-    mugiMessage: "犬D：むぎ ちょっと警戒… -5",
-    riccaMessage: "犬D：りっか あわわ… -5",
+    width: 130,
+    height: 100,
+    scores: { mugi: -5, ricca: -5 },
+    messages: {
+      mugi: "犬D：むぎ ちょっと警戒… -5",
+      ricca: "犬D：りっか あわわ… -5",
+      riccaAwakenedNegative: "犬D：覚醒りっか 勢い余った！ -10"
+    },
     imagePaths: ["assets/images/other_dog_d_01.png", "assets/images/other_dog_d_02.png"]
   }
 };
@@ -565,8 +578,8 @@ class OtherDog {
   constructor(config, index) {
     this.x = config.x;
     this.groundY = config.groundY ?? config.y;
-    this.type = config.type ?? "A";
-    this.config = OTHER_DOG_TYPES[this.type] ?? OTHER_DOG_TYPES.A;
+    this.type = normalizeOtherDogType(config.type);
+    this.config = OTHER_DOG_TYPES[this.type];
     this.width = this.config.width;
     this.height = this.config.height;
     this.color = config.colorVariant || this.config.color;
@@ -636,8 +649,8 @@ class OtherDog {
     context.font = `bold ${this.height > 50 ? 22 : 16}px system-ui, sans-serif`;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText(this.type, x + this.width * 0.44, y + this.height * 0.53);
-    context.strokeText(this.type, x + this.width * 0.44, y + this.height * 0.53);
+    context.fillText(this.config.id, x + this.width * 0.44, y + this.height * 0.53);
+    context.strokeText(this.config.id, x + this.width * 0.44, y + this.height * 0.53);
     context.restore();
   }
 
@@ -1341,14 +1354,27 @@ function getSafeGroundX(random, length, holes, usedX = [], options = {}) {
   return fallbackX;
 }
 
+function getStageGenerationCounts(config) {
+  const segmentCount = Math.max(1, Math.round(config.length / STAGE_CONFIG.segmentWidth));
+  return {
+    holes: Math.max(1, Math.round(segmentCount * config.holesPerSegment)),
+    obstacles: Math.max(1, Math.round(segmentCount * config.obstaclesPerSegment)),
+    platforms: Math.max(1, Math.round(segmentCount * config.platformsPerSegment)),
+    treats: Math.max(1, Math.round(segmentCount * config.treatsPerSegment)),
+    awakeningItems: config.awakeningItems,
+    dogs: Math.max(1, Math.round(segmentCount * config.dogsPerSegment))
+  };
+}
+
 function generateStage(stageNumber) {
   const random = createRandom();
   const config = STAGE_GENERATION_CONFIGS[stageNumber];
+  const counts = getStageGenerationCounts(config);
   const length = config.length;
   const holes = [];
   const usedX = [];
 
-  for (let i = 0; i < config.holes; i += 1) {
+  for (let i = 0; i < counts.holes; i += 1) {
     const x = getSafeGroundX(random, length, holes, usedX, {
       minX: 700,
       maxX: length - 900,
@@ -1365,7 +1391,7 @@ function generateStage(stageNumber) {
   const platforms = getGroundPlatformSegments(length, holes);
   const upperPlatforms = [];
 
-  for (let i = 0; i < config.platforms; i += 1) {
+  for (let i = 0; i < counts.platforms; i += 1) {
     const isUpper = i % 3 === 2;
     const y = isUpper ? randomInt(random, 238, 270) : randomInt(random, 310, 346);
     const width = randomInt(random, 220, 330);
@@ -1387,7 +1413,7 @@ function generateStage(stageNumber) {
   }
 
   const obstacles = [];
-  for (let i = 0; i < config.obstacles; i += 1) {
+  for (let i = 0; i < counts.obstacles; i += 1) {
     const height = randomInt(random, 38, config.maxObstacleHeight);
     const x = getSafeGroundX(random, length, holes, usedX, {
       minX: 760,
@@ -1404,7 +1430,7 @@ function generateStage(stageNumber) {
   }
 
   const items = [];
-  for (let i = 0; i < config.treats; i += 1) {
+  for (let i = 0; i < counts.treats; i += 1) {
     const platform = upperPlatforms.length && random() < 0.45 ? chooseRandom(random, upperPlatforms) : null;
     if (platform) {
       items.push({
@@ -1423,7 +1449,7 @@ function generateStage(stageNumber) {
     }
   }
 
-  for (let i = 0; i < config.awakeningItems; i += 1) {
+  for (let i = 0; i < counts.awakeningItems; i += 1) {
     const platform = upperPlatforms.length && random() < 0.55 ? chooseRandom(random, upperPlatforms) : null;
     if (platform) {
       items.push({
@@ -1448,9 +1474,9 @@ function generateStage(stageNumber) {
     dogTypes.push("D");
   }
 
-  for (let i = 0; i < config.dogs; i += 1) {
-    const mustPlaceD = stageNumber >= 3 && i === config.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
-    const type = mustPlaceD ? "D" : chooseRandom(random, dogTypes);
+  for (let i = 0; i < counts.dogs; i += 1) {
+    const mustPlaceD = stageNumber >= 3 && i === counts.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
+    const type = normalizeOtherDogType(mustPlaceD ? "D" : chooseRandom(random, dogTypes));
     const typeConfig = OTHER_DOG_TYPES[type];
     const canUsePlatform = type !== "D" && upperPlatforms.length && random() < 0.2;
     const platform = canUsePlatform ? chooseRandom(random, upperPlatforms) : null;
@@ -1496,6 +1522,7 @@ function generateStage(stageNumber) {
       platforms: platforms.length,
       items: items.length,
       otherDogs: otherDogs.length,
+      generationCounts: counts,
       goalX: level.goal.x
     });
   }
@@ -1514,14 +1541,17 @@ highScore = readStoredNumber(STORAGE_KEYS.highScore, 0);
 updateTitleHighScore();
 updateSoundHud();
 updateGamepadHud();
+debugPrintDogScoreTable();
 menuManager.updateSelection();
 
 function resetGame(options = {}) {
   if (options.resetScore) {
     score = 0;
   }
-  if (options.resetScore || options.resetAwakening) {
+  if (options.resetAwakeningCount) {
     awakeningItemCount = 0;
+  }
+  if (options.resetScore || options.resetAwakeningState) {
     isAwakened = false;
     awakeningTimer = 0;
     awakeningMessageTimer = 0;
@@ -1554,7 +1584,7 @@ function startGame() {
   currentLevelIndex = 0;
   randomState = RANDOM_SEED;
   generateCurrentStage();
-  resetGame({ resetScore: true, characterId: "ricca" });
+  resetGame({ resetScore: true, resetAwakeningCount: true, resetAwakeningState: true, characterId: "ricca" });
   gameState = GAME_STATE.PLAYING;
   soundManager.startStageBgm();
   titleScreen.classList.add("hidden");
@@ -1607,7 +1637,7 @@ function goToNextStage() {
 
   currentLevelIndex += 1;
   generateCurrentStage();
-  resetGame({ characterId: activeCharacterId, resetAwakening: true });
+  resetGame({ characterId: activeCharacterId, resetAwakeningState: true });
   gameState = GAME_STATE.PLAYING;
   soundManager.startStageBgm();
   stageClearScreen.classList.add("hidden");
@@ -1620,7 +1650,7 @@ function continueCurrentStage() {
   soundManager.resume();
   score = Math.max(0, score - STAGE_CONFIG.continuePenalty);
   generateCurrentStage();
-  resetGame({ characterId: "ricca", resetAwakening: true });
+  resetGame({ characterId: "ricca", resetAwakeningState: true });
   gameState = GAME_STATE.PLAYING;
   soundManager.startStageBgm();
   titleScreen.classList.add("hidden");
@@ -1744,16 +1774,19 @@ function handleOtherDogEvents() {
     }
 
     triggerOtherDogEvent(otherDog);
+    break;
   }
 }
 
 function triggerOtherDogEvent(otherDog) {
-  const dogConfig = otherDog.config;
+  if (!otherDog.canTrigger()) {
+    return;
+  }
+
   const awakenedRicca = activeCharacterId === "ricca" && isAwakened;
-  const scoreChange = getOtherDogScoreDelta(activeCharacterId, awakenedRicca, dogConfig);
+  const scoreChange = getOtherDogScoreDelta(activeCharacterId, awakenedRicca, otherDog.type);
   const scoreLabel = scoreChange > 0 ? `+${scoreChange}` : String(scoreChange);
-  const message = activeCharacterId === "mugi" ? dogConfig.mugiMessage : dogConfig.riccaMessage;
-  const displayMessage = awakenedRicca ? `覚醒中 ${message.replace(/[+-]\d+$/, scoreLabel)}` : message;
+  const displayMessage = getOtherDogMessage(activeCharacterId, awakenedRicca, otherDog.type, scoreChange);
 
   messageManager.add(displayMessage, 1.3);
   if (activeCharacterId === "ricca" && !awakenedRicca && scoreChange > 0) {
@@ -1761,33 +1794,64 @@ function triggerOtherDogEvent(otherDog) {
   }
 
   addScore(scoreChange, scoreLabel, player.x, player.y - 10);
-  applyOtherDogReaction(scoreChange, activeCharacterId, awakenedRicca);
+  applyOtherDogReaction(scoreChange, awakenedRicca);
   soundManager[scoreChange >= 0 ? "playCombo" : "playGau"]();
   otherDog.triggerReaction(awakenedRicca ? "awakened" : activeCharacterId);
   updateHud();
 }
 
-function getOtherDogScoreDelta(characterId, awakenedRicca, dogConfig) {
-  if (characterId === "mugi") {
-    return dogConfig.mugiScore;
+function normalizeOtherDogType(type) {
+  if (Object.prototype.hasOwnProperty.call(OTHER_DOG_TYPES, type)) {
+    return type;
   }
-
-  const baseScore = dogConfig.riccaScore;
-  return awakenedRicca ? baseScore * 2 : baseScore;
+  if (DEBUG_DOG_LOGIC) {
+    console.warn("Unknown other dog type. Falling back to A.", type);
+  }
+  return "A";
 }
 
-function applyOtherDogReaction(scoreChange, characterId, awakenedRicca) {
-  if (scoreChange >= 0) {
-    return;
+function getOtherDogScoreDelta(characterId, awakenedRicca, otherDogType) {
+  const dogConfig = OTHER_DOG_TYPES[normalizeOtherDogType(otherDogType)];
+  if (characterId === "mugi") {
+    return dogConfig.scores.mugi;
   }
 
+  const baseScore = dogConfig.scores.ricca;
+  return characterId === "ricca" && awakenedRicca ? baseScore * 2 : baseScore;
+}
+
+function getOtherDogMessage(characterId, awakenedRicca, otherDogType, scoreChange) {
+  const dogConfig = OTHER_DOG_TYPES[normalizeOtherDogType(otherDogType)];
   if (characterId === "mugi") {
-    mugiStunTimer = OTHER_DOG_CONFIG.mugiStunDuration;
+    return dogConfig.messages.mugi;
+  }
+  if (awakenedRicca) {
+    const key = scoreChange >= 0 ? "riccaAwakenedPositive" : "riccaAwakenedNegative";
+    return dogConfig.messages[key] ?? `覚醒中 ${dogConfig.messages.ricca.replace(/[+-]\d+$/, scoreChange > 0 ? `+${scoreChange}` : String(scoreChange))}`;
+  }
+  return dogConfig.messages.ricca;
+}
+
+function applyOtherDogReaction(scoreChange, awakenedRicca) {
+  if (scoreChange >= 0) {
     return;
   }
 
   const slowScale = awakenedRicca ? OTHER_DOG_CONFIG.awakenedPenaltySlowScale : OTHER_DOG_CONFIG.normalPenaltySlowScale;
   player.vx *= slowScale;
+}
+
+function debugPrintDogScoreTable() {
+  if (!DEBUG_DOG_LOGIC) {
+    return;
+  }
+  for (const type of ["A", "B", "C", "D"]) {
+    console.log(type, {
+      mugi: getOtherDogScoreDelta("mugi", false, type),
+      ricca: getOtherDogScoreDelta("ricca", false, type),
+      riccaAwakened: getOtherDogScoreDelta("ricca", true, type)
+    });
+  }
 }
 
 function switchCharacter() {
@@ -2519,7 +2583,7 @@ Promise.all([loadCharacterImages(), loadOtherDogImages()]).then(([images, loaded
   characterImages = images;
   otherDogImages = loadedOtherDogImages;
   generateCurrentStage();
-  resetGame({ resetScore: true, characterId: "ricca" });
+  resetGame({ resetScore: true, resetAwakeningCount: true, resetAwakeningState: true, characterId: "ricca" });
   draw();
   requestAnimationFrame((time) => {
     lastTime = time;
