@@ -69,11 +69,11 @@ const STAGE_CONFIG = {
 };
 
 const STAGE_GENERATION_CONFIGS = {
-  1: { length: 3200, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: 3, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
-  2: { length: 3800, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: 3, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
-  3: { length: 4400, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: 4, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
-  4: { length: 5000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: 4, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
-  5: { length: 5600, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: 4, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
+  1: { baseLength: 3200, length: 6400, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: 1, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
+  2: { baseLength: 3800, length: 7600, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: 2, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
+  3: { baseLength: 4400, length: 8800, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: 2, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
+  4: { baseLength: 5000, length: 10000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: 2, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
+  5: { baseLength: 5600, length: 11200, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: 2, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
 };
 
 const AWAKENING_CONFIG = {
@@ -216,104 +216,6 @@ const CHARACTER_CONFIGS = {
 const CHARACTER_ORDER = ["ricca", "mugi"];
 const START_POSITION = { x: 80, y: 360 };
 let randomState = RANDOM_SEED;
-
-const LEVELS = [
-  {
-    name: "Stage 1",
-    length: 3200,
-    goal: { x: 3070, y: 310, width: STAGE_CONFIG.goalWidth, height: STAGE_CONFIG.goalHeight },
-    platforms: [
-      { x: 0, y: 438, width: 520, height: 42, type: "ground" },
-      { x: 620, y: 438, width: 760, height: 42, type: "ground" },
-      { x: 1460, y: 438, width: 720, height: 42, type: "ground" },
-      { x: 2260, y: 438, width: 940, height: 42, type: "ground" },
-      { x: 860, y: 344, width: 270, height: 28, type: "middle" },
-      { x: 1220, y: 300, width: 280, height: 28, type: "middle" },
-      { x: 1660, y: 334, width: 300, height: 28, type: "middle" },
-      { x: 1940, y: 240, width: 270, height: 28, type: "upper" },
-      { x: 2380, y: 326, width: 320, height: 28, type: "middle" },
-      { x: 2760, y: 236, width: 300, height: 28, type: "upper" }
-    ],
-    holes: [
-      { x: 520, width: 100 },
-      { x: 1380, width: 80 },
-      { x: 2180, width: 80 }
-    ],
-    obstacles: [
-      { x: 360, y: 394, width: 40, height: 44 },
-      { x: 760, y: 390, width: 42, height: 48 },
-      { x: 1530, y: 394, width: 46, height: 44 },
-      { x: 2520, y: 388, width: 48, height: 50 }
-    ],
-    items: [
-      { type: "treat", x: 240, y: 385 },
-      { type: "treat", x: 690, y: 385 },
-      { type: "awakening", x: 960, y: 292 },
-      { type: "treat", x: 1320, y: 248 },
-      { type: "awakening", x: 1770, y: 282 },
-      { type: "treat", x: 2040, y: 190 },
-      { type: "treat", x: 2470, y: 276 },
-      { type: "awakening", x: 2660, y: 386 },
-      { type: "treat", x: 2890, y: 186 },
-      { type: "treat", x: 2860, y: 154 },
-      { type: "treat", x: 3000, y: 116 }
-    ],
-    otherDogs: [
-      { type: "A", x: 1180, groundY: 438 },
-      { type: "B", x: 1720, groundY: 438 },
-      { type: "C", x: 2320, groundY: 438 },
-      { type: "D", x: 2940, groundY: 438, colorVariant: "#222222" }
-    ]
-  },
-  {
-    name: "Stage 2",
-    length: 3500,
-    goal: { x: 3370, y: 310, width: STAGE_CONFIG.goalWidth, height: STAGE_CONFIG.goalHeight },
-    platforms: [
-      { x: 0, y: 438, width: 700, height: 42, type: "ground" },
-      { x: 800, y: 438, width: 680, height: 42, type: "ground" },
-      { x: 1580, y: 438, width: 540, height: 42, type: "ground" },
-      { x: 2220, y: 438, width: 1280, height: 42, type: "ground" },
-      { x: 620, y: 340, width: 260, height: 28, type: "middle" },
-      { x: 1040, y: 306, width: 260, height: 28, type: "middle" },
-      { x: 1700, y: 330, width: 280, height: 28, type: "middle" },
-      { x: 2020, y: 238, width: 260, height: 28, type: "upper" },
-      { x: 2460, y: 320, width: 330, height: 28, type: "middle" },
-      { x: 2920, y: 250, width: 280, height: 28, type: "upper" },
-      { x: 3090, y: 184, width: 210, height: 24, type: "upper" }
-    ],
-    holes: [
-      { x: 700, width: 100 },
-      { x: 1480, width: 100 },
-      { x: 2120, width: 100 }
-    ],
-    obstacles: [
-      { x: 420, y: 392, width: 42, height: 46 },
-      { x: 980, y: 392, width: 44, height: 46 },
-      { x: 1760, y: 388, width: 48, height: 50 },
-      { x: 2640, y: 384, width: 50, height: 54 },
-      { x: 3160, y: 388, width: 48, height: 50 }
-    ],
-    items: [
-      { type: "treat", x: 230, y: 385 },
-      { type: "awakening", x: 650, y: 288 },
-      { type: "treat", x: 1160, y: 254 },
-      { type: "awakening", x: 1660, y: 386 },
-      { type: "treat", x: 2110, y: 188 },
-      { type: "treat", x: 2580, y: 270 },
-      { type: "awakening", x: 2860, y: 386 },
-      { type: "treat", x: 3030, y: 200 },
-      { type: "treat", x: 3190, y: 136 },
-      { type: "treat", x: 3290, y: 385 }
-    ],
-    otherDogs: [
-      { type: "A", x: 1340, groundY: 438 },
-      { type: "B", x: 1880, groundY: 438 },
-      { type: "C", x: 2380, groundY: 438 },
-      { type: "D", x: 3050, groundY: 250, colorVariant: "#888888" }
-    ]
-  }
-];
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -1354,14 +1256,33 @@ function getSafeGroundX(random, length, holes, usedX = [], options = {}) {
   return fallbackX;
 }
 
+
+function getLengthScaledCount(config, key) {
+  const baseLength = config.baseLength ?? config.length;
+  const scale = config.length / baseLength;
+  return Math.max(1, Math.round(config[key] * scale));
+}
+
+function getStageGenerationCounts(config) {
+  return {
+    holes: getLengthScaledCount(config, "holes"),
+    obstacles: getLengthScaledCount(config, "obstacles"),
+    platforms: getLengthScaledCount(config, "platforms"),
+    treats: getLengthScaledCount(config, "treats"),
+    awakeningItems: config.awakeningItems,
+    dogs: getLengthScaledCount(config, "dogs")
+  };
+}
+
 function generateStage(stageNumber) {
   const random = createRandom();
   const config = STAGE_GENERATION_CONFIGS[stageNumber];
   const length = config.length;
+  const counts = getStageGenerationCounts(config);
   const holes = [];
   const usedX = [];
 
-  for (let i = 0; i < config.holes; i += 1) {
+  for (let i = 0; i < counts.holes; i += 1) {
     const x = getSafeGroundX(random, length, holes, usedX, {
       minX: 700,
       maxX: length - 900,
@@ -1378,7 +1299,7 @@ function generateStage(stageNumber) {
   const platforms = getGroundPlatformSegments(length, holes);
   const upperPlatforms = [];
 
-  for (let i = 0; i < config.platforms; i += 1) {
+  for (let i = 0; i < counts.platforms; i += 1) {
     const isUpper = i % 3 === 2;
     const y = isUpper ? randomInt(random, 238, 270) : randomInt(random, 310, 346);
     const width = randomInt(random, 220, 330);
@@ -1400,7 +1321,7 @@ function generateStage(stageNumber) {
   }
 
   const obstacles = [];
-  for (let i = 0; i < config.obstacles; i += 1) {
+  for (let i = 0; i < counts.obstacles; i += 1) {
     const height = randomInt(random, 38, config.maxObstacleHeight);
     const x = getSafeGroundX(random, length, holes, usedX, {
       minX: 760,
@@ -1417,7 +1338,7 @@ function generateStage(stageNumber) {
   }
 
   const items = [];
-  for (let i = 0; i < config.treats; i += 1) {
+  for (let i = 0; i < counts.treats; i += 1) {
     const platform = upperPlatforms.length && random() < 0.45 ? chooseRandom(random, upperPlatforms) : null;
     if (platform) {
       items.push({
@@ -1436,7 +1357,7 @@ function generateStage(stageNumber) {
     }
   }
 
-  for (let i = 0; i < config.awakeningItems; i += 1) {
+  for (let i = 0; i < counts.awakeningItems; i += 1) {
     const platform = upperPlatforms.length && random() < 0.55 ? chooseRandom(random, upperPlatforms) : null;
     if (platform) {
       items.push({
@@ -1461,8 +1382,8 @@ function generateStage(stageNumber) {
     dogTypes.push("D");
   }
 
-  for (let i = 0; i < config.dogs; i += 1) {
-    const mustPlaceD = stageNumber >= 3 && i === config.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
+  for (let i = 0; i < counts.dogs; i += 1) {
+    const mustPlaceD = stageNumber >= 3 && i === counts.dogs - 1 && !otherDogs.some((dog) => dog.type === "D");
     const type = normalizeOtherDogType(mustPlaceD ? "D" : chooseRandom(random, dogTypes));
     const typeConfig = OTHER_DOG_TYPES[type];
     const canUsePlatform = type !== "D" && upperPlatforms.length && random() < 0.2;
@@ -1534,8 +1455,10 @@ function resetGame(options = {}) {
   if (options.resetScore) {
     score = 0;
   }
-  if (options.resetScore || options.resetAwakening) {
+  if (options.resetAwakeningItems) {
     awakeningItemCount = 0;
+  }
+  if (options.resetScore || options.resetAwakening) {
     isAwakened = false;
     awakeningTimer = 0;
     awakeningMessageTimer = 0;
@@ -1568,7 +1491,7 @@ function startGame() {
   currentLevelIndex = 0;
   randomState = RANDOM_SEED;
   generateCurrentStage();
-  resetGame({ resetScore: true, characterId: "ricca" });
+  resetGame({ resetScore: true, resetAwakening: true, resetAwakeningItems: true, characterId: "ricca" });
   gameState = GAME_STATE.PLAYING;
   soundManager.startStageBgm();
   titleScreen.classList.add("hidden");
@@ -2567,7 +2490,7 @@ Promise.all([loadCharacterImages(), loadOtherDogImages()]).then(([images, loaded
   characterImages = images;
   otherDogImages = loadedOtherDogImages;
   generateCurrentStage();
-  resetGame({ resetScore: true, characterId: "ricca" });
+  resetGame({ resetScore: true, resetAwakening: true, resetAwakeningItems: true, characterId: "ricca" });
   draw();
   requestAnimationFrame((time) => {
     lastTime = time;
