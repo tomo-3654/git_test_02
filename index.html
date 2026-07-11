@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>むぎとりっかの横スクロールアクション Ver.0.9.2</title>
+  <title>むぎとりっかの横スクロールアクション Ver.0.9.3</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -36,14 +36,17 @@
         </section>
         <section class="rule-card controls-card">
           <h2>操作</h2>
-          <p>PC：← → で移動 / Space または ↑ でジャンプ / C または Tab で交代 / Mで音ON/OFF</p>
+          <p>PC：← → で移動 / Space または ↑ でジャンプ / C または Tab で交代 / MでBGM ON/OFF</p>
           <p>スマホ：画面下のボタンで操作</p>
-          <p>コントローラ：D-pad左右で移動 / Aでジャンプ / Bで交代 / Selectで音ON/OFF</p>
+          <p>コントローラ：D-pad左右で移動 / Aでジャンプ / Bで交代 / SelectでBGM ON/OFF</p>
         </section>
       </div>
       <p class="final-score">High Score: <strong id="titleHighScoreText">0</strong></p>
       <button id="startButton" class="menu-button" type="button">START</button>
-      <button id="titleSoundButton" class="menu-button secondary" type="button">SOUND ON</button>
+      <div class="audio-toggle-group" aria-label="音声設定">
+        <button id="titleBgmButton" class="menu-button secondary audio-toggle" type="button">BGM ON</button>
+        <button id="titleSfxButton" class="menu-button secondary audio-toggle" type="button">SE ON</button>
+      </div>
     </section>
 
     <section id="gameScreen" class="screen game-screen hidden">
@@ -55,7 +58,8 @@
         </div>
         <div class="hud-row secondary">
           <span>Awaken <strong id="awakeningText">0/3</strong></span>
-          <span>Sound <strong id="soundText">ON</strong></span>
+          <span>BGM <strong id="bgmText">ON</strong></span>
+          <span>SE <strong id="sfxText">ON</strong></span>
           <span>Pad <strong id="padText">OFF</strong></span>
           <span class="switch-help">C / Tab: 交代</span>
         </div>
@@ -72,7 +76,8 @@
           <button id="jumpButton" class="control-button jump" type="button">JUMP</button>
         </div>
         <div class="mobile-controls-secondary">
-          <button id="muteButton" class="control-button mute" type="button">音ON</button>
+          <button id="bgmButton" class="control-button mute" type="button">BGM ON</button>
+          <button id="sfxButton" class="control-button mute" type="button">SE ON</button>
         </div>
       </div>
     </section>

@@ -21,7 +21,8 @@ const GAME_STATE = {
 
 const STORAGE_KEYS = {
   highScore: "ricca_mugi_game_high_score",
-  muted: "ricca_mugi_game_muted"
+  bgmMuted: "ricca_mugi_game_bgm_muted",
+  sfxMuted: "ricca_mugi_game_sfx_muted"
 };
 
 const AUDIO_CONFIG = {
@@ -31,14 +32,13 @@ const AUDIO_CONFIG = {
 };
 
 const BGM_TRACKS = {
-  stage: [
-    "assets/sounds/mugi_ricca_BGM_01.mp3",
-    "assets/sounds/mugi_ricca_BGM_02.mp3",
-    "assets/sounds/mugi_ricca_BGM_03.mp3",
-    "assets/sounds/mugi_ricca_BGM_04.mp3",
-    "assets/sounds/mugi_ricca_BGM_05.mp3",
-    "assets/sounds/mugi_ricca_BGM_06.mp3"
-  ],
+  stage: {
+    1: "assets/sounds/mugi_ricca_BGM_01.mp3",
+    2: "assets/sounds/mugi_ricca_BGM_02.mp3",
+    3: "assets/sounds/mugi_ricca_BGM_03.mp3",
+    4: "assets/sounds/mugi_ricca_BGM_04.mp3",
+    5: "assets/sounds/mugi_ricca_BGM_05.mp3"
+  },
   trance: "assets/sounds/ricca_trance_BGM.mp3"
 };
 
@@ -225,7 +225,8 @@ const gameOverScreen = document.getElementById("gameOverScreen");
 const stageClearScreen = document.getElementById("stageClearScreen");
 const endingScreen = document.getElementById("endingScreen");
 const startButton = document.getElementById("startButton");
-const titleSoundButton = document.getElementById("titleSoundButton");
+const titleBgmButton = document.getElementById("titleBgmButton");
+const titleSfxButton = document.getElementById("titleSfxButton");
 const restartButton = document.getElementById("restartButton");
 const continueButton = document.getElementById("continueButton");
 const nextStageButton = document.getElementById("nextStageButton");
@@ -234,13 +235,15 @@ const clearTitleButton = document.getElementById("clearTitleButton");
 const gameOverTitleButton = document.getElementById("gameOverTitleButton");
 const endingPlayAgainButton = document.getElementById("endingPlayAgainButton");
 const endingTitleButton = document.getElementById("endingTitleButton");
-const muteButton = document.getElementById("muteButton");
+const bgmButton = document.getElementById("bgmButton");
+const sfxButton = document.getElementById("sfxButton");
 const stageText = document.getElementById("stageText");
 const scoreText = document.getElementById("scoreText");
 const characterText = document.getElementById("characterText");
 const awakeningText = document.getElementById("awakeningText");
 const awakeningBar = document.getElementById("awakeningBar");
-const soundText = document.getElementById("soundText");
+const bgmText = document.getElementById("bgmText");
+const sfxText = document.getElementById("sfxText");
 const padText = document.getElementById("padText");
 const titleHighScoreText = document.getElementById("titleHighScoreText");
 const finalScoreText = document.getElementById("finalScoreText");
@@ -670,11 +673,12 @@ class SoundManager {
   constructor() {
     this.context = null;
     this.enabled = false;
-    this.muted = readStoredBoolean(STORAGE_KEYS.muted, false);
+    this.bgmMuted = readStoredBoolean(STORAGE_KEYS.bgmMuted, false);
+    this.sfxMuted = readStoredBoolean(STORAGE_KEYS.sfxMuted, false);
     this.stageBgm = null;
     this.tranceBgm = null;
     this.currentStageTrackPath = null;
-    this.previousStageTrackPath = null;
+    this.currentStageNumber = null;
     this.isTranceBgmPlaying = false;
   }
 
@@ -709,19 +713,29 @@ class SoundManager {
     }
   }
 
-  setMuted(value) {
-    this.muted = value;
-    writeStoredBoolean(STORAGE_KEYS.muted, value);
-    if (this.muted) {
-      this.pauseBgm();
-    } else if (gameState === GAME_STATE.PLAYING) {
-      this.resumeBgm();
+  setBgmMuted(value) {
+    this.bgmMuted = value;
+    writeStoredBoolean(STORAGE_KEYS.bgmMuted, value);
+    if (this.bgmMuted) {
+      this.stopBgm();
+    } else {
+      this.playBgmForCurrentState();
     }
     updateSoundHud();
   }
 
-  toggleMuted() {
-    this.setMuted(!this.muted);
+  toggleBgmMuted() {
+    this.setBgmMuted(!this.bgmMuted);
+  }
+
+  setSfxMuted(value) {
+    this.sfxMuted = value;
+    writeStoredBoolean(STORAGE_KEYS.sfxMuted, value);
+    updateSoundHud();
+  }
+
+  toggleSfxMuted() {
+    this.setSfxMuted(!this.sfxMuted);
   }
 
   playJump() {
@@ -789,16 +803,15 @@ class SoundManager {
     ]);
   }
 
-  startStageBgm() {
+  startStageBgm(stageNumber = currentLevelIndex + 1) {
     this.resume();
-    const trackPath = this.chooseStageTrack();
-    this.previousStageTrackPath = this.currentStageTrackPath;
-    this.currentStageTrackPath = trackPath;
+    this.currentStageNumber = stageNumber;
+    this.currentStageTrackPath = this.getStageTrack(stageNumber);
     this.isTranceBgmPlaying = false;
     this.stopAudio(this.tranceBgm, true);
     this.tranceBgm = null;
     this.stopAudio(this.stageBgm, true);
-    this.stageBgm = this.createLoopingAudio(trackPath, AUDIO_CONFIG.bgmVolume);
+    this.stageBgm = this.createLoopingAudio(this.currentStageTrackPath, AUDIO_CONFIG.bgmVolume);
     this.playAudio(this.stageBgm);
   }
 
@@ -815,8 +828,8 @@ class SoundManager {
     this.isTranceBgmPlaying = false;
     this.stopAudio(this.tranceBgm, true);
     this.tranceBgm = null;
-    if (gameState === GAME_STATE.PLAYING) {
-      this.playAudio(this.stageBgm);
+    if (gameState === GAME_STATE.PLAYING && !this.bgmMuted) {
+      this.startStageBgm(this.currentStageNumber ?? currentLevelIndex + 1);
     }
   }
 
@@ -827,28 +840,21 @@ class SoundManager {
     this.tranceBgm = null;
   }
 
-  pauseBgm() {
-    this.pauseAudio(this.stageBgm);
-    this.pauseAudio(this.tranceBgm);
-  }
-
-  resumeBgm() {
-    if (this.isTranceBgmPlaying) {
-      this.playAudio(this.tranceBgm);
-    } else {
-      this.playAudio(this.stageBgm);
-    }
-  }
-
-  chooseStageTrack() {
-    if (BGM_TRACKS.stage.length === 0) {
-      return "";
+  playBgmForCurrentState() {
+    if (gameState !== GAME_STATE.PLAYING || this.bgmMuted) {
+      return;
     }
 
-    const availableTracks = BGM_TRACKS.stage.length > 1
-      ? BGM_TRACKS.stage.filter((track) => track !== this.currentStageTrackPath)
-      : BGM_TRACKS.stage;
-    return availableTracks[Math.floor(Math.random() * availableTracks.length)];
+    if (isAwakened) {
+      this.switchToTranceBgm();
+      return;
+    }
+
+    this.startStageBgm(currentLevelIndex + 1);
+  }
+
+  getStageTrack(stageNumber) {
+    return BGM_TRACKS.stage[stageNumber] ?? BGM_TRACKS.stage[1] ?? "";
   }
 
   createLoopingAudio(src, volume) {
@@ -868,7 +874,7 @@ class SoundManager {
   }
 
   playAudio(audio) {
-    if (!audio || this.muted) {
+    if (!audio || this.bgmMuted) {
       return;
     }
 
@@ -910,7 +916,7 @@ class SoundManager {
   }
 
   playToneSequence(notes) {
-    if (this.muted) {
+    if (this.sfxMuted) {
       return;
     }
 
@@ -1045,7 +1051,7 @@ class MenuManager {
 
   getButtons() {
     if (gameState === GAME_STATE.TITLE) {
-      return [startButton, titleSoundButton];
+      return [startButton, titleBgmButton, titleSfxButton];
     }
     if (gameState === GAME_STATE.GAME_OVER) {
       return [continueButton, restartButton, gameOverTitleButton];
@@ -1162,10 +1168,17 @@ function updateSoundHud() {
   if (!soundManager) {
     return;
   }
-  const label = soundManager.muted ? "OFF" : "ON";
-  soundText.textContent = label;
-  muteButton.textContent = soundManager.muted ? "音OFF" : "音ON";
-  titleSoundButton.textContent = soundManager.muted ? "SOUND OFF" : "SOUND ON";
+  const bgmLabel = soundManager.bgmMuted ? "OFF" : "ON";
+  const sfxLabel = soundManager.sfxMuted ? "OFF" : "ON";
+  bgmText.textContent = bgmLabel;
+  sfxText.textContent = sfxLabel;
+  bgmButton.textContent = `BGM ${bgmLabel}`;
+  sfxButton.textContent = `SE ${sfxLabel}`;
+  titleBgmButton.textContent = `BGM ${bgmLabel}`;
+  titleSfxButton.textContent = `SE ${sfxLabel}`;
+  for (const [button, isOff] of [[bgmButton, soundManager.bgmMuted], [sfxButton, soundManager.sfxMuted], [titleBgmButton, soundManager.bgmMuted], [titleSfxButton, soundManager.sfxMuted]]) {
+    button.classList.toggle("is-off", isOff);
+  }
 }
 
 function updateGamepadHud() {
@@ -2191,7 +2204,7 @@ function handleGamepadInput() {
     if (gamepadManager.isPressed("SELECT")) {
       input.soundTogglePressed = true;
       soundManager.resume();
-      soundManager.toggleMuted();
+      soundManager.toggleBgmMuted();
     }
     return;
   }
@@ -2457,7 +2470,7 @@ window.addEventListener("keydown", (event) => {
   }
   if (event.code === "KeyM" && !event.repeat) {
     soundManager.resume();
-    soundManager.toggleMuted();
+    soundManager.toggleBgmMuted();
   }
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyC", "KeyM", "Tab"].includes(event.code)) {
     event.preventDefault();
@@ -2489,9 +2502,14 @@ window.addEventListener("gamepaddisconnected", () => {
 window.addEventListener("contextmenu", (event) => event.preventDefault());
 
 startButton.addEventListener("click", startGame);
-titleSoundButton.addEventListener("click", () => {
+titleBgmButton.addEventListener("click", () => {
   soundManager.resume();
-  soundManager.toggleMuted();
+  soundManager.toggleBgmMuted();
+  menuManager.updateSelection();
+});
+titleSfxButton.addEventListener("click", () => {
+  soundManager.resume();
+  soundManager.toggleSfxMuted();
   menuManager.updateSelection();
 });
 restartButton.addEventListener("click", startGame);
@@ -2502,9 +2520,13 @@ clearTitleButton.addEventListener("click", showTitleScreen);
 gameOverTitleButton.addEventListener("click", showTitleScreen);
 endingPlayAgainButton.addEventListener("click", startGame);
 endingTitleButton.addEventListener("click", showTitleScreen);
-muteButton.addEventListener("click", () => {
+bgmButton.addEventListener("click", () => {
   soundManager.resume();
-  soundManager.toggleMuted();
+  soundManager.toggleBgmMuted();
+});
+sfxButton.addEventListener("click", () => {
+  soundManager.resume();
+  soundManager.toggleSfxMuted();
 });
 setButtonHold(document.getElementById("leftButton"), "left");
 setButtonHold(document.getElementById("rightButton"), "right");
