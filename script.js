@@ -69,11 +69,11 @@ const STAGE_CONFIG = {
 };
 
 const STAGE_GENERATION_CONFIGS = {
-  1: { baseLength: 3200, length: 6400, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: 1, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
-  2: { baseLength: 3800, length: 7600, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: 2, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
-  3: { baseLength: 4400, length: 8800, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: 2, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
-  4: { baseLength: 5000, length: 10000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: 2, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
-  5: { baseLength: 5600, length: 11200, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: 2, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
+  1: { baseLength: 3200, length: 6400, holes: 2, obstacles: 3, platforms: 4, treats: 8, awakeningItems: { min: 3, max: 3 }, dogs: 2, dogTypes: ["A", "B", "C"], maxHoleWidth: 105, maxObstacleHeight: 46 },
+  2: { baseLength: 3800, length: 7600, holes: 3, obstacles: 4, platforms: 5, treats: 10, awakeningItems: { min: 3, max: 4 }, dogs: 3, dogTypes: ["A", "B", "C"], maxHoleWidth: 120, maxObstacleHeight: 52 },
+  3: { baseLength: 4400, length: 8800, holes: 3, obstacles: 5, platforms: 6, treats: 11, awakeningItems: { min: 4, max: 4 }, dogs: 4, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 130, maxObstacleHeight: 56 },
+  4: { baseLength: 5000, length: 10000, holes: 4, obstacles: 6, platforms: 7, treats: 12, awakeningItems: { min: 4, max: 5 }, dogs: 5, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 140, maxObstacleHeight: 60 },
+  5: { baseLength: 5600, length: 11200, holes: 5, obstacles: 7, platforms: 8, treats: 14, awakeningItems: { min: 5, max: 6 }, dogs: 6, dogTypes: ["A", "B", "C", "D"], maxHoleWidth: 145, maxObstacleHeight: 62 }
 };
 
 const AWAKENING_CONFIG = {
@@ -1263,22 +1263,63 @@ function getLengthScaledCount(config, key) {
   return Math.max(1, Math.round(config[key] * scale));
 }
 
-function getStageGenerationCounts(config) {
+function getAwakeningItemTargetCount(config, random) {
+  const range = config.awakeningItems;
+  if (typeof range === "number") {
+    return range;
+  }
+  return randomInt(random, range.min, range.max);
+}
+
+function getStageGenerationCounts(config, random = Math.random) {
   return {
     holes: getLengthScaledCount(config, "holes"),
     obstacles: getLengthScaledCount(config, "obstacles"),
     platforms: getLengthScaledCount(config, "platforms"),
     treats: getLengthScaledCount(config, "treats"),
-    awakeningItems: config.awakeningItems,
+    awakeningItems: getAwakeningItemTargetCount(config, random),
     dogs: getLengthScaledCount(config, "dogs")
   };
+}
+
+function isUsableAwakeningItemSpot(x, y, holes, obstacles, usedItemX) {
+  const safeFromHoles = y < STAGE_CONFIG.groundY - 80 || !isNearHole(x, holes, 120);
+  const safeFromObstacles = obstacles.every((obstacle) => Math.abs(x - (obstacle.x + obstacle.width / 2)) >= 90);
+  return safeFromHoles && safeFromObstacles && isFarEnough(x, usedItemX, 360);
+}
+
+function createAwakeningItem(random, length, holes, obstacles, upperPlatforms, usedItemX) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const platform = upperPlatforms.length && random() < 0.55 ? chooseRandom(random, upperPlatforms) : null;
+    const x = platform
+      ? platform.x + platform.width * randomBetween(random, 0.28, 0.72)
+      : getSafeGroundX(random, length, holes, [], {
+        minX: 820,
+        maxX: length - 620,
+        minDistance: 220,
+        holePadding: 120
+      });
+    const y = platform ? platform.y - 52 : STAGE_CONFIG.groundY - 52;
+    if (isUsableAwakeningItemSpot(x, y, holes, obstacles, usedItemX)) {
+      usedItemX.push(x);
+      return { type: "awakening", x: Math.round(x), y };
+    }
+  }
+
+  const x = getSafeGroundX(random, length, holes, usedItemX, {
+    minX: 820,
+    maxX: length - 620,
+    minDistance: 280,
+    holePadding: 140
+  });
+  return { type: "awakening", x: Math.round(x), y: STAGE_CONFIG.groundY - 52 };
 }
 
 function generateStage(stageNumber) {
   const random = createRandom();
   const config = STAGE_GENERATION_CONFIGS[stageNumber];
   const length = config.length;
-  const counts = getStageGenerationCounts(config);
+  const counts = getStageGenerationCounts(config, random);
   const holes = [];
   const usedX = [];
 
@@ -1357,23 +1398,9 @@ function generateStage(stageNumber) {
     }
   }
 
+  const usedAwakeningItemX = items.map((item) => item.x);
   for (let i = 0; i < counts.awakeningItems; i += 1) {
-    const platform = upperPlatforms.length && random() < 0.55 ? chooseRandom(random, upperPlatforms) : null;
-    if (platform) {
-      items.push({
-        type: "awakening",
-        x: Math.round(platform.x + platform.width * randomBetween(random, 0.28, 0.72)),
-        y: platform.y - 52
-      });
-    } else {
-      const x = getSafeGroundX(random, length, holes, usedX, {
-        minX: 820,
-        maxX: length - 620,
-        minDistance: 220,
-        holePadding: 90
-      });
-      items.push({ type: "awakening", x: Math.round(x), y: STAGE_CONFIG.groundY - 52 });
-    }
+    items.push(createAwakeningItem(random, length, holes, obstacles, upperPlatforms, usedAwakeningItemX));
   }
 
   const otherDogs = [];
